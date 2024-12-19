@@ -1,5 +1,6 @@
 const std = @import("std");
 
+//Bit Manipulations
 pub fn getBit(bitboard: u64, square: u6) u1 {
     if (bitboard & (@as(u64, 1) << square) == 0) return 0 else return 1;
 }
@@ -16,6 +17,7 @@ pub fn popBit(bitboard: *u64, square: u6) !u64 {
     return bitboard.*;
 }
 
+//Print Board Functions
 pub fn printBitboard(bitboard: u64) !void {
     for (0..8) |rank| {
         for (0..8) |file| {
