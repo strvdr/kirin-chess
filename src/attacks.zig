@@ -21,8 +21,9 @@ const not_HG_file: u64 = 4557430888798830399;
 const not_AB_file: u64 = 18229723555195321596;
 
 pub var pawnAttacks: [2][64]u64 = undefined;
+pub var knightAttacks: [64]u64 = undefined;
 
-pub fn maskPawnAttacks(side: u1, square: u6) !u64 {
+fn maskPawnAttacks(side: u1, square: u6) !u64 {
     var attacks: u64 = @as(u64, 0);
     var Bitboard: u64 = @as(u64, 0);
 
@@ -46,10 +47,29 @@ pub fn maskPawnAttacks(side: u1, square: u6) !u64 {
     return attacks;
 }
 
+fn maskKnightAttacks(square: u6) !u64 {
+    var attacks: u64 = @as(u64, 0);
+    var Bitboard: u64 = @as(u64, 0);
+
+    Bitboard = try utils.setBit(&Bitboard, square);
+
+    if (((Bitboard >> 17) & not_H_file) != 0) attacks |= (Bitboard >> 17);
+    if (((Bitboard >> 15) & not_A_file) != 0) attacks |= (Bitboard >> 15);
+    if (((Bitboard >> 10) & not_HG_file) != 0) attacks |= (Bitboard >> 10);
+    if (((Bitboard >> 6) & not_AB_file) != 0) attacks |= (Bitboard >> 6);
+    if (((Bitboard << 17) & not_A_file) != 0) attacks |= (Bitboard << 17);
+    if (((Bitboard << 15) & not_H_file) != 0) attacks |= (Bitboard << 15);
+    if (((Bitboard << 10) & not_AB_file) != 0) attacks |= (Bitboard << 10);
+    if (((Bitboard << 6) & not_HG_file) != 0) attacks |= (Bitboard << 6);
+
+    return attacks;
+}
+
 pub fn initLeaperAttacks() !void {
     for (0..64) |index| {
         const square: u6 = @intCast(index);
         pawnAttacks[@intFromEnum(bitboard.side.white)][square] = try maskPawnAttacks(@intFromEnum(bitboard.side.white), @as(u6, square));
         pawnAttacks[@intFromEnum(bitboard.side.black)][square] = try maskPawnAttacks(@intFromEnum(bitboard.side.black), @as(u6, square));
+        knightAttacks[square] = try maskKnightAttacks(square);
     }
 }
