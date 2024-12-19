@@ -9,7 +9,14 @@ pub fn main() !void {
 
     var Bitboard: u64 = 0;
     try utils.printBitboard(Bitboard);
-    Bitboard |= @as(u64, 1) << @intFromEnum(bitboard.boardSquares.e2);
+    Bitboard = try utils.setBit(&Bitboard, @intFromEnum(bitboard.boardSquares.e2));
+    Bitboard = try utils.setBit(&Bitboard, @intFromEnum(bitboard.boardSquares.e8));
+    Bitboard = try utils.popBit(&Bitboard, @intFromEnum(bitboard.boardSquares.e2));
+    Bitboard = try utils.setBit(&Bitboard, @intFromEnum(bitboard.boardSquares.e2));
+    Bitboard = try utils.popBit(&Bitboard, @intFromEnum(bitboard.boardSquares.e8));
+    Bitboard = try utils.popBit(&Bitboard, @intFromEnum(bitboard.boardSquares.e8));
+    Bitboard = try utils.popBit(&Bitboard, @intFromEnum(bitboard.boardSquares.e8));
+    Bitboard = try utils.setBit(&Bitboard, @intFromEnum(bitboard.boardSquares.e8));
     try utils.printBitboard(Bitboard);
     try stdout.print("Run `zig build test` to run the tests.\n", .{});
 
