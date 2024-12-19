@@ -8,7 +8,7 @@ pub fn main() !void {
     var bw = std.io.bufferedWriter(stdout_file);
     const stdout = bw.writer();
 
-    //try utils.printBitboard(try attacks.maskKnightAttacks(@intFromEnum(bitboard.boardSquares.e4)));
+    //try utils.printBitboard(try attacks.maskBishopAttacks(@intFromEnum(bitboard.boardSquares.d4)));
 
     try attacks.initLeaperAttacks();
 
@@ -17,6 +17,8 @@ pub fn main() !void {
         try utils.printBitboard(attacks.pawnAttacks[@intFromEnum(bitboard.side.black)][square]);
         std.debug.print("\nKnight: \n", .{});
         try utils.printBitboard(attacks.knightAttacks[square]);
+        std.debug.print("\nKing: \n", .{});
+        try utils.printBitboard(attacks.kingAttacks[square]);
     }
 
     try stdout.print("Run `zig build test` to run the tests.\n", .{});
