@@ -2,7 +2,6 @@ const std = @import("std");
 const utils = @import("utils.zig");
 const bitboard = @import("bitboard.zig");
 
-const pawnAttacks: u64[2][64] = undefined;
 //       not A file             not H file             not AB file            not HG file
 //
 //  8  0 1 1 1 1 1 1 1     8  1 1 1 1 1 1 1 0     8  0 0 1 1 1 1 1 1     8  1 1 1 1 1 1 0 0
@@ -16,14 +15,14 @@ const pawnAttacks: u64[2][64] = undefined;
 //
 //     a b c d e f g h        a b c d e f g h        a b c d e f g h        a b c d e f g h
 //
-//
-
 const not_A_file: u64 = 18374403900871474942;
 const not_H_file: u64 = 9187201950435737471;
 const not_HG_file: u64 = 4557430888798830399;
 const not_AB_file: u64 = 18229723555195321596;
 
-pub fn maskPawnAttacks(square: u6, side: u1) !u64 {
+pub var pawnAttacks: [2][64]u64 = undefined;
+
+pub fn maskPawnAttacks(side: u1, square: u6) !u64 {
     var attacks: u64 = @as(u64, 0);
     var Bitboard: u64 = @as(u64, 0);
 
@@ -44,6 +43,13 @@ pub fn maskPawnAttacks(square: u6, side: u1) !u64 {
             attacks |= (Bitboard << 9);
         }
     }
-
     return attacks;
+}
+
+pub fn initLeaperAttacks() !void {
+    for (0..64) |index| {
+        const square: u6 = @intCast(index);
+        pawnAttacks[@intFromEnum(bitboard.side.white)][square] = try maskPawnAttacks(@intFromEnum(bitboard.side.white), @as(u6, square));
+        pawnAttacks[@intFromEnum(bitboard.side.black)][square] = try maskPawnAttacks(@intFromEnum(bitboard.side.black), @as(u6, square));
+    }
 }

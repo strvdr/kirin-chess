@@ -8,9 +8,13 @@ pub fn main() !void {
     var bw = std.io.bufferedWriter(stdout_file);
     const stdout = bw.writer();
 
-    try utils.printBitboard(try attacks.maskPawnAttacks(@intFromEnum(bitboard.boardSquares.h4), @intFromEnum(bitboard.side.white)));
-    try utils.printBitboard(try attacks.maskPawnAttacks(@intFromEnum(bitboard.boardSquares.f4), @intFromEnum(bitboard.side.white)));
-    try utils.printBitboard(try attacks.maskPawnAttacks(@intFromEnum(bitboard.boardSquares.c5), @intFromEnum(bitboard.side.black)));
+    try utils.printBitboard(try attacks.maskPawnAttacks(@intFromEnum(bitboard.side.black), @intFromEnum(bitboard.boardSquares.c5)));
+
+    try attacks.initLeaperAttacks();
+
+    for (0..64) |square| {
+        try utils.printBitboard(attacks.pawnAttacks[@intFromEnum(bitboard.side.black)][square]);
+    }
 
     try stdout.print("Run `zig build test` to run the tests.\n", .{});
 
