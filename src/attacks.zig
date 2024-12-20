@@ -180,7 +180,7 @@ fn bishopAttacksOTF(square: u6, block: u64) !u64 {
     return attacks;
 }
 
-fn maskRookAttacks(square: u6) !u64 {
+pub fn maskRookAttacks(square: u6) !u64 {
     var attacks: u64 = @as(u64, 0);
 
     const targetRank: i8 = square / 8;
