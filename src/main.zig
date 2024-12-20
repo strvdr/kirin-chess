@@ -13,12 +13,16 @@ pub fn main() !void {
     try attacks.initLeaperAttacks();
 
     var block = @as(u64, 0);
-    block = try utils.setBit(&block, @intFromEnum(bitboard.boardSquares.b6));
-    block = try utils.setBit(&block, @intFromEnum(bitboard.boardSquares.g7));
-    block = try utils.setBit(&block, @intFromEnum(bitboard.boardSquares.e3));
-    block = try utils.setBit(&block, @intFromEnum(bitboard.boardSquares.b2));
+    block = try utils.setBit(&block, @intFromEnum(bitboard.boardSquares.d2));
+    block = try utils.setBit(&block, @intFromEnum(bitboard.boardSquares.d7));
+    block = try utils.setBit(&block, @intFromEnum(bitboard.boardSquares.b4));
     try utils.printBitboard(block);
-
+    //std.debug.print("Count Bits: {d}\n", .{try utils.countBits(&block)});
+    std.debug.print("LSB Index: {s}\n", .{bitboard.squareCoordinates[@intCast(try utils.getLSBindex(block))]});
+    block = try utils.setBit(&block, @intFromEnum(bitboard.boardSquares.f4));
+    try utils.printBitboard(block);
+    std.debug.print("Count Bits: {d}\n", .{try utils.countBits(block)});
+    //try utils.printBitboard(try attacks.rookAttacksOTF(@intFromEnum(bitboard.boardSquares.d4), block));
     // for (0..64) |square| {
     //     //std.debug.print("\nPawn: \n", .{});
     //     //try utils.printBitboard(attacks.pawnAttacks[@intFromEnum(bitboard.side.black)][square]);

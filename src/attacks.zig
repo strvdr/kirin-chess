@@ -78,7 +78,7 @@ fn maskKingAttacks(square: u6) !u64 {
     return attacks;
 }
 
-pub fn maskBishopAttacks(square: u6) !u64 {
+fn maskBishopAttacks(square: u6) !u64 {
     var attacks: u64 = @as(u64, 0);
 
     const targetRank: i8 = square / 8;
@@ -127,7 +127,7 @@ pub fn maskBishopAttacks(square: u6) !u64 {
     return attacks;
 }
 
-pub fn bishopAttacksOTF(square: u6, block: u64) !u64 {
+fn bishopAttacksOTF(square: u6, block: u64) !u64 {
     var attacks: u64 = @as(u64, 0);
 
     const targetRank: i8 = square / 8;
@@ -150,6 +150,7 @@ pub fn bishopAttacksOTF(square: u6, block: u64) !u64 {
     while (rank >= 0 and file <= 7) {
         const result: u6 = @intCast(rank * 8 + file);
         attacks |= @as(u64, 1) << result;
+        if (((@as(u64, 1) << result) & block) != 0) break;
         rank -= 1;
         file += 1;
     }
@@ -160,6 +161,7 @@ pub fn bishopAttacksOTF(square: u6, block: u64) !u64 {
     while (rank <= 7 and file >= 0) {
         const result: u6 = @intCast(rank * 8 + file);
         attacks |= @as(u64, 1) << result;
+        if (((@as(u64, 1) << result) & block) != 0) break;
         rank += 1;
         file -= 1;
     }
@@ -170,13 +172,15 @@ pub fn bishopAttacksOTF(square: u6, block: u64) !u64 {
     while (rank >= 0 and file >= 0) {
         const result: u6 = @intCast(rank * 8 + file);
         attacks |= @as(u64, 1) << result;
+        if (((@as(u64, 1) << result) & block) != 0) break;
         rank -= 1;
         file -= 1;
     }
 
     return attacks;
 }
-pub fn maskRookAttacks(square: u6) !u64 {
+
+fn maskRookAttacks(square: u6) !u64 {
     var attacks: u64 = @as(u64, 0);
 
     const targetRank: i8 = square / 8;
@@ -211,6 +215,51 @@ pub fn maskRookAttacks(square: u6) !u64 {
     while (file >= 1) {
         const result: u6 = @intCast(targetRank * 8 + file);
         attacks |= @as(u64, 1) << result;
+        file -= 1;
+    }
+
+    return attacks;
+}
+
+pub fn rookAttacksOTF(square: u6, block: u64) !u64 {
+    var attacks: u64 = @as(u64, 0);
+
+    const targetRank: i8 = square / 8;
+    const targetFile: i8 = square % 8;
+
+    var rank: i8 = targetRank + 1;
+
+    while (rank <= 7) {
+        const result: u6 = @intCast(rank * 8 + targetFile);
+        attacks |= @as(u64, 1) << result;
+        if (((@as(u64, 1) << result) & block) != 0) break;
+        rank += 1;
+    }
+
+    rank = targetRank - 1;
+
+    while (rank >= 0) {
+        const result: u6 = @intCast(rank * 8 + targetFile);
+        attacks |= @as(u64, 1) << result;
+        if (((@as(u64, 1) << result) & block) != 0) break;
+        rank -= 1;
+    }
+
+    var file: i8 = targetFile + 1;
+
+    while (file <= 7) {
+        const result: u6 = @intCast(targetRank * 8 + file);
+        attacks |= @as(u64, 1) << result;
+        if (((@as(u64, 1) << result) & block) != 0) break;
+        file += 1;
+    }
+
+    file = targetFile - 1;
+
+    while (file >= 0) {
+        const result: u6 = @intCast(targetRank * 8 + file);
+        attacks |= @as(u64, 1) << result;
+        if (((@as(u64, 1) << result) & block) != 0) break;
         file -= 1;
     }
 

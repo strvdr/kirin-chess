@@ -1,4 +1,5 @@
 const std = @import("std");
+const assert = std.debug.assert;
 
 //Bit Manipulations
 pub fn getBit(bitboard: u64, square: u6) u1 {
@@ -15,6 +16,24 @@ pub fn popBit(bitboard: *u64, square: u6) !u64 {
         bitboard.* ^= (@as(u64, 1) << square);
     }
     return bitboard.*;
+}
+
+pub fn countBits(bitboard: u64) !u6 {
+    var bitboardCopy = bitboard;
+    var bits_set: usize = 0;
+    while (bitboardCopy != 0) : (bits_set += 1) {
+        bitboardCopy &= bitboardCopy - 1;
+    }
+    return @as(u6, @truncate(bits_set));
+}
+
+pub fn getLSBindex(bitboard: u64) !i8 {
+    const bitboardCopy = bitboard;
+    if (bitboardCopy != 0) {
+        return try countBits((bitboardCopy & (~bitboardCopy + 1)) - 1);
+    } else {
+        return -1;
+    }
 }
 
 //Print Board Functions
