@@ -42,8 +42,8 @@ pub fn setOccupancy(index: u32, bitsInMask: u6, attackMask: u64) !u64 {
     for (0..bitsInMask) |count| {
         const square: u6 = @intCast(try getLSBindex(attackMaskCopy));
         attackMaskCopy = try popBit(&attackMaskCopy, square);
-        const w: u6 = @intCast(count);
-        if ((index & (@as(u64, 1) << w)) != 0) {
+        const bitShift: u6 = @intCast(count);
+        if ((index & (@as(u64, 1) << bitShift)) != 0) {
             occupancy |= @as(u64, 1) << square;
         }
     }
