@@ -26,11 +26,11 @@ pub var kingAttacks: [64]u64 = undefined;
 pub var bishopAttacks: [64]u64 = undefined;
 pub var rookAttacks: [64]u64 = undefined;
 
-fn maskPawnAttacks(side: u1, square: u6) !u64 {
+fn maskPawnAttacks(side: u1, square: u6) u64 {
     var attacks: u64 = @as(u64, 0);
     var Bitboard: u64 = @as(u64, 0);
 
-    Bitboard = try utils.setBit(&Bitboard, square);
+    Bitboard = utils.setBit(&Bitboard, square);
 
     if (side == 0) {
         if (((Bitboard >> 7) & not_A_file) != 0) attacks |= (Bitboard >> 7);
@@ -43,11 +43,11 @@ fn maskPawnAttacks(side: u1, square: u6) !u64 {
     return attacks;
 }
 
-fn maskKnightAttacks(square: u6) !u64 {
+fn maskKnightAttacks(square: u6) u64 {
     var attacks: u64 = @as(u64, 0);
     var Bitboard: u64 = @as(u64, 0);
 
-    Bitboard = try utils.setBit(&Bitboard, square);
+    Bitboard = utils.setBit(&Bitboard, square);
 
     if (((Bitboard >> 17) & not_H_file) != 0) attacks |= (Bitboard >> 17);
     if (((Bitboard >> 15) & not_A_file) != 0) attacks |= (Bitboard >> 15);
@@ -61,11 +61,11 @@ fn maskKnightAttacks(square: u6) !u64 {
     return attacks;
 }
 
-fn maskKingAttacks(square: u6) !u64 {
+fn maskKingAttacks(square: u6) u64 {
     var attacks: u64 = @as(u64, 0);
     var Bitboard: u64 = @as(u64, 0);
 
-    Bitboard = try utils.setBit(&Bitboard, square);
+    Bitboard = utils.setBit(&Bitboard, square);
     if ((Bitboard >> 8) != 0) attacks |= (Bitboard >> 8);
     if (((Bitboard >> 9) & not_H_file) != 0) attacks |= (Bitboard >> 9);
     if (((Bitboard >> 7) & not_A_file) != 0) attacks |= (Bitboard >> 7);
@@ -78,7 +78,7 @@ fn maskKingAttacks(square: u6) !u64 {
     return attacks;
 }
 
-fn maskBishopAttacks(square: u6) !u64 {
+fn maskBishopAttacks(square: u6) u64 {
     var attacks: u64 = @as(u64, 0);
 
     const targetRank: i8 = square / 8;
@@ -127,7 +127,7 @@ fn maskBishopAttacks(square: u6) !u64 {
     return attacks;
 }
 
-fn bishopAttacksOTF(square: u6, block: u64) !u64 {
+fn bishopAttacksOTF(square: u6, block: u64) u64 {
     var attacks: u64 = @as(u64, 0);
 
     const targetRank: i8 = square / 8;
@@ -180,7 +180,7 @@ fn bishopAttacksOTF(square: u6, block: u64) !u64 {
     return attacks;
 }
 
-pub fn maskRookAttacks(square: u6) !u64 {
+pub fn maskRookAttacks(square: u6) u64 {
     var attacks: u64 = @as(u64, 0);
 
     const targetRank: i8 = square / 8;
@@ -221,7 +221,7 @@ pub fn maskRookAttacks(square: u6) !u64 {
     return attacks;
 }
 
-pub fn rookAttacksOTF(square: u6, block: u64) !u64 {
+pub fn rookAttacksOTF(square: u6, block: u64) u64 {
     var attacks: u64 = @as(u64, 0);
 
     const targetRank: i8 = square / 8;
@@ -266,12 +266,12 @@ pub fn rookAttacksOTF(square: u6, block: u64) !u64 {
     return attacks;
 }
 
-pub fn initLeaperAttacks() !void {
+pub fn initLeaperAttacks() void {
     for (0..64) |index| {
         const square: u6 = @intCast(index);
-        pawnAttacks[@intFromEnum(bitboard.side.white)][square] = try maskPawnAttacks(@intFromEnum(bitboard.side.white), @as(u6, square));
-        pawnAttacks[@intFromEnum(bitboard.side.black)][square] = try maskPawnAttacks(@intFromEnum(bitboard.side.black), @as(u6, square));
-        knightAttacks[square] = try maskKnightAttacks(square);
-        kingAttacks[square] = try maskKingAttacks(square);
+        pawnAttacks[@intFromEnum(bitboard.side.white)][square] = maskPawnAttacks(@intFromEnum(bitboard.side.white), @as(u6, square));
+        pawnAttacks[@intFromEnum(bitboard.side.black)][square] = maskPawnAttacks(@intFromEnum(bitboard.side.black), @as(u6, square));
+        knightAttacks[square] = maskKnightAttacks(square);
+        kingAttacks[square] = maskKingAttacks(square);
     }
 }
