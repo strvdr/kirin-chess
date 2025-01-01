@@ -1,20 +1,13 @@
 
 # Kirin Chess Engine
 [![GPLv3 License](https://img.shields.io/badge/License-GPL%20v3-yellow.svg)](https://opensource.org/licenses/)
+
 The original Kirin Chess Engine was written in C and the source code is available [here](https://github.com/strvdr/kirin-ce). I have since deprecated this project and am now writing the Kirin Chess Engine in Zig. 
 
 
 ## Authors
 
 - [Strydr Silverberg - @strvdr](https://www.github.com/strvdr)
-
-
-## Acknowledgements
-Thank you greatly to Maksim Korzh, without whom I would not have been able to write Kirin. Also, thank you to the people on the Talk Chess forum and the Chess Programming Wiki for putting together resources used in the creation of Kirin.
- - [Maksim Korzh](https://github.com/maksimKorzh)
- - [Talk Chess](https://talkchess.com/)
- - [ChessProgramming Wiki](https://www.chessprogramming.org/Main_Page)
-
 
 ## Documentation
 
@@ -41,4 +34,11 @@ Kirin also has a documentation website, [kirin.strydr.net](https://kirin.strydr.
 - Transposition table (up to 128MB)
 - PURE Stockfish NNUE evaluation + 50 move rule penalty
 - UCI protocol
+
+## Acknowledgements
+Thank you greatly to Maksim Korzh, without whom I would not have been able to write Kirin. Also, thank you to the people on the Talk Chess forum and the Chess Programming Wiki for putting together resources used in the creation of Kirin.
+ - [Maksim Korzh](https://github.com/maksimKorzh)
+ - [Talk Chess](https://talkchess.com/)
+ - [ChessProgramming Wiki](https://www.chessprogramming.org/Main_Page)
+
 
