@@ -13,7 +13,10 @@
 // You should have received a copy of the GNU General Public License
 // along with Kirin Chess.  If not, see <https://www.gnu.org/licenses/>.
 
+const std = @import("std");
 const bitboard = @import("bitboard.zig");
+const attacks = @import("attacks.zig");
+const utils = @import("utils.zig");
 
 fn getRandomNumberU32() u32 {
     var number: u32 = bitboard.state;
@@ -41,9 +44,59 @@ fn generateMagicNumber() u64 {
     return getRandomNumberU64() & getRandomNumberU64() & getRandomNumberU64();
 }
 
-pub fn findMagicNumber(square: u6, relevantBits: u6, attackMask: u64) u64 { 
-    var occupancies: u64[4096] = undefined;
-    var attacks: u64[4096] = undefined;
-    var usedAttacks: u64[4096] = undefined;
+pub fn findMagicNumber(square: u6, relevantBits: u5, bishop: bool) u64 {
+    var occupancies: [4096]u64 = undefined;
+    var unusedAttacks: [4096]u64 = undefined;
+    var usedAttacks: [4096]u64 = undefined;
+    var attackMask: u64 = undefined;
 
+    if (bishop) {
+        attackMask = attacks.maskBishopAttacks(square);
+    } else {
+        attackMask = attacks.maskRookAttacks(square);
+    }
+
+    const occupancyIndicies: u32 = @as(u32, 1) << relevantBits;
+
+    for (0..occupancyIndicies) |index| {
+        occupancies[index] = utils.setOccupancy(@intCast(index), relevantBits, attackMask);
+        if (bishop) {
+            unusedAttacks[index] = attacks.bishopAttacksOTF(square, occupancies[index]);
+        } else {
+            unusedAttacks[index] = attacks.rookAttacksOTF(square, occupancies[index]);
+        }
+    }
+
+    var randCount: u32 = 0;
+    while (randCount < 100000000) : (randCount += 1) {
+        const magicNumber = generateMagicNumber();
+
+        if (utils.countBits((attackMask *% magicNumber) & 0xFF00000000000000) < 6) continue;
+
+        @memset(usedAttacks[0..], 0);
+        var index: u32 = 0;
+        var fail: bool = false;
+
+        while (!fail and index < occupancyIndicies) {
+            const magicIndex: u32 = @intCast((occupancies[index] *% magicNumber) >> @intCast(64 - @as(u8, relevantBits)));
+
+            if (usedAttacks[magicIndex] == 0) {
+                usedAttacks[magicIndex] = unusedAttacks[index];
+            } else if (usedAttacks[magicIndex] != unusedAttacks[index]) { // Fixed array reference
+                fail = true;
+            }
+            index += 1;
+        }
+        if (!fail) return magicNumber;
+    }
+
+    std.debug.print("   Magic Number Fails!", .{});
+    return 0;
+}
+
+pub fn initMagicNumbers() void {
+    for (0..64) |square| {
+        const result: u64 = findMagicNumber(@intCast(square), bitboard.bishopRelevantBits[square], true);
+        std.debug.print(" 0x{d}\n", .{result});
+    }
 }

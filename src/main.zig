@@ -25,12 +25,7 @@ pub fn main() !void {
 
     attacks.initLeaperAttacks();
     //std.debug.print("Rand Num: {d}\n", .{});
-
-    utils.printBitboard(@as(u64, magic.getRandomNumberU32()));
-    utils.printBitboard(@as(u64, magic.getRandomNumberU32()) & 0xFFFF);
-    utils.printBitboard(magic.getRandomNumberU64());
-    utils.printBitboard(magic.generateMagicNumber());
-
+    magic.initMagicNumbers();
     // const bitsInMask = utils.countBits(attacks.maskRookAttacks(@intFromEnum(bitboard.boardSquares.a1)));
     // std.debug.print("Bits in mask: {d}\n", .{bitsInMask});
     // const occupancy = utils.setOccupancy(4095, bitsInMask, attacks.maskRookAttacks(@intFromEnum(bitboard.boardSquares.a1)));

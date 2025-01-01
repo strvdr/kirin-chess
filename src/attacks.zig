@@ -93,7 +93,7 @@ fn maskKingAttacks(square: u6) u64 {
     return attacks;
 }
 
-fn maskBishopAttacks(square: u6) u64 {
+pub fn maskBishopAttacks(square: u6) u64 {
     var attacks: u64 = @as(u64, 0);
 
     const targetRank: i8 = square / 8;
@@ -142,7 +142,7 @@ fn maskBishopAttacks(square: u6) u64 {
     return attacks;
 }
 
-fn bishopAttacksOTF(square: u6, block: u64) u64 {
+pub fn bishopAttacksOTF(square: u6, block: u64) u64 {
     var attacks: u64 = @as(u64, 0);
 
     const targetRank: i8 = square / 8;
