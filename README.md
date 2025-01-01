@@ -35,6 +35,10 @@ Kirin also has a documentation website, [kirin.strydr.net](https://kirin.strydr.
 - PURE Stockfish NNUE evaluation + 50 move rule penalty
 - UCI protocol
 
+## License
+
+[GPL v3](https://www.gnu.org/licenses/gpl-3.0.html)
+
 ## Acknowledgements
 Thank you greatly to Maksim Korzh, without whom I would not have been able to write Kirin. Also, thank you to the people on the Talk Chess forum and the Chess Programming Wiki for putting together resources used in the creation of Kirin.
  - [Maksim Korzh](https://github.com/maksimKorzh)
