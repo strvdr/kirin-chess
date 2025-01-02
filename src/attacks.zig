@@ -38,8 +38,10 @@ const not_AB_file: u64 = 18229723555195321596;
 pub var pawnAttacks: [2][64]u64 = undefined;
 pub var knightAttacks: [64]u64 = undefined;
 pub var kingAttacks: [64]u64 = undefined;
-pub var bishopAttacks: [64]u64 = undefined;
-pub var rookAttacks: [64]u64 = undefined;
+pub var bishopMasks: [64]u64 = undefined;
+pub var rookMasks: [64]u64 = undefined;
+pub var bishopAttacks: [64][512]u64 = undefined;
+pub var rookAttacks: [64][4096]u64 = undefined;
 
 fn maskPawnAttacks(side: u1, square: u6) u64 {
     var attacks: u64 = @as(u64, 0);
@@ -281,7 +283,7 @@ pub fn rookAttacksOTF(square: u6, block: u64) u64 {
     return attacks;
 }
 
-pub fn initLeaperAttacks() void {
+fn initLeaperAttacks() void {
     for (0..64) |index| {
         const square: u6 = @intCast(index);
         pawnAttacks[@intFromEnum(bitboard.side.white)][square] = maskPawnAttacks(@intFromEnum(bitboard.side.white), @as(u6, square));
@@ -289,4 +291,63 @@ pub fn initLeaperAttacks() void {
         knightAttacks[square] = maskKnightAttacks(square);
         kingAttacks[square] = maskKingAttacks(square);
     }
+}
+
+fn initSliderAttacks(bishop: bool) void {
+    var attackMask: u64 = undefined;
+
+    for (0..64) |square| {
+        bishopMasks[square] = maskBishopAttacks(@intCast(square));
+        rookMasks[square] = maskRookAttacks(@intCast(square));
+
+        if (bishop) {
+            attackMask = bishopMasks[square];
+        } else {
+            attackMask = rookMasks[square];
+        }
+
+        const relevantBits = utils.countBits(attackMask);
+        const occupancyIndicies = @as(u64, 1) << @intCast(relevantBits);
+        var occupancy: u64 = undefined;
+        var magicIndex: u64 = undefined;
+
+        for (0..occupancyIndicies) |index| {
+            if (bishop) {
+                occupancy = utils.setOccupancy(@intCast(index), relevantBits, attackMask);
+                magicIndex = (occupancy *% bitboard.bishopMagicNumbers[square]) >> @intCast(64 - @as(u8, bitboard.bishopRelevantBits[square]));
+                bishopAttacks[square][magicIndex] = bishopAttacksOTF(@intCast(square), occupancy);
+            } else {
+                occupancy = utils.setOccupancy(@intCast(index), relevantBits, attackMask);
+                magicIndex = (occupancy *% bitboard.rookMagicNumbers[square]) >> @intCast(64 - @as(u8, bitboard.rookRelevantBits[square]));
+                rookAttacks[square][magicIndex] = rookAttacksOTF(@intCast(square), occupancy);
+            }
+        }
+    }
+}
+
+pub fn getBishopAttacks(square: u6, occupancy: u64) u64 {
+    var occupancyCopy = occupancy;
+
+    occupancyCopy &= bishopMasks[square];
+    occupancyCopy *%= bitboard.bishopMagicNumbers[square];
+    occupancyCopy >>= @intCast(64 - @as(u8, bitboard.bishopRelevantBits[square]));
+
+    return bishopAttacks[square][occupancyCopy];
+}
+
+pub fn getRookAttacks(square: u6, occupancy: u64) u64 {
+    var occupancyCopy = occupancy;
+
+    occupancyCopy &= rookMasks[square];
+    occupancyCopy *%= bitboard.rookMagicNumbers[square];
+    occupancyCopy >>= @intCast(64 - @as(u8, bitboard.rookRelevantBits[square]));
+
+    return rookAttacks[square][occupancyCopy];
+}
+
+pub fn initAll() void {
+    initLeaperAttacks();
+    //for bishop and rook
+    initSliderAttacks(true);
+    initSliderAttacks(false);
 }

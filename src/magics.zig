@@ -44,7 +44,7 @@ fn generateMagicNumber() u64 {
     return getRandomNumberU64() & getRandomNumberU64() & getRandomNumberU64();
 }
 
-pub fn findMagicNumber(square: u6, relevantBits: u5, bishop: bool) u64 {
+fn findMagicNumber(square: u6, relevantBits: u5, bishop: bool) u64 {
     var occupancies: [4096]u64 = undefined;
     var unusedAttacks: [4096]u64 = undefined;
     var usedAttacks: [4096]u64 = undefined;
@@ -94,15 +94,15 @@ pub fn findMagicNumber(square: u6, relevantBits: u5, bishop: bool) u64 {
     return 0;
 }
 
-pub fn initMagicNumbers() void {
+fn initMagicNumbers() void {
     std.debug.print("bishop:\n", .{});
     for (0..64) |square| {
         const result: u64 = findMagicNumber(@intCast(square), bitboard.bishopRelevantBits[square], true);
-        std.debug.print(" 0x{x}\n", .{result});
+        std.debug.print("0x{x},\n", .{result});
     }
     std.debug.print("rook:\n", .{});
     for (0..64) |square| {
         const result: u64 = findMagicNumber(@intCast(square), bitboard.rookRelevantBits[square], true);
-        std.debug.print(" 0x{x}\n", .{result});
+        std.debug.print(" 0x{x},\n", .{result});
     }
 }

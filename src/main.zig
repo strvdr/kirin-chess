@@ -23,12 +23,10 @@ pub fn main() !void {
     const stdout_file = std.io.getStdOut().writer();
     var bw = std.io.bufferedWriter(stdout_file);
 
-    attacks.initLeaperAttacks();
-    //std.debug.print("Rand Num: {d}\n", .{});
-    magic.initMagicNumbers();
-    // const bitsInMask = utils.countBits(attacks.maskRookAttacks(@intFromEnum(bitboard.boardSquares.a1)));
-    // std.debug.print("Bits in mask: {d}\n", .{bitsInMask});
-    // const occupancy = utils.setOccupancy(4095, bitsInMask, attacks.maskRookAttacks(@intFromEnum(bitboard.boardSquares.a1)));
+    attacks.initAll();
 
+    //this is disgusting please help
+    bitboard.bitboards[@intFromEnum(bitboard.pieceEncoding.P)] = utils.setBit(&bitboard.bitboards[@intFromEnum(bitboard.pieceEncoding.P)], @intFromEnum(bitboard.boardSquares.e2));
+    utils.printBitboard(bitboard.bitboards[@intFromEnum(bitboard.pieceEncoding.P)]);
     try bw.flush(); // Don't forget to flush!
 }
