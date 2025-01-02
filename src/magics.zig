@@ -82,7 +82,7 @@ pub fn findMagicNumber(square: u6, relevantBits: u5, bishop: bool) u64 {
 
             if (usedAttacks[magicIndex] == 0) {
                 usedAttacks[magicIndex] = unusedAttacks[index];
-            } else if (usedAttacks[magicIndex] != unusedAttacks[index]) { // Fixed array reference
+            } else if (usedAttacks[magicIndex] != unusedAttacks[index]) {
                 fail = true;
             }
             index += 1;
@@ -95,8 +95,14 @@ pub fn findMagicNumber(square: u6, relevantBits: u5, bishop: bool) u64 {
 }
 
 pub fn initMagicNumbers() void {
+    std.debug.print("bishop:\n", .{});
     for (0..64) |square| {
         const result: u64 = findMagicNumber(@intCast(square), bitboard.bishopRelevantBits[square], true);
-        std.debug.print(" 0x{d}\n", .{result});
+        std.debug.print(" 0x{x}\n", .{result});
+    }
+    std.debug.print("rook:\n", .{});
+    for (0..64) |square| {
+        const result: u64 = findMagicNumber(@intCast(square), bitboard.rookRelevantBits[square], true);
+        std.debug.print(" 0x{x}\n", .{result});
     }
 }
