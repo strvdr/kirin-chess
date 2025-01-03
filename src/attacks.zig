@@ -47,7 +47,7 @@ fn maskPawnAttacks(side: u1, square: u6) u64 {
     var attacks: u64 = @as(u64, 0);
     var Bitboard: u64 = @as(u64, 0);
 
-    Bitboard = utils.setBit(&Bitboard, square);
+    utils.setBit(&Bitboard, square);
 
     if (side == 0) {
         if (((Bitboard >> 7) & not_A_file) != 0) attacks |= (Bitboard >> 7);
@@ -64,7 +64,7 @@ fn maskKnightAttacks(square: u6) u64 {
     var attacks: u64 = @as(u64, 0);
     var Bitboard: u64 = @as(u64, 0);
 
-    Bitboard = utils.setBit(&Bitboard, square);
+    utils.setBit(&Bitboard, square);
 
     if (((Bitboard >> 17) & not_H_file) != 0) attacks |= (Bitboard >> 17);
     if (((Bitboard >> 15) & not_A_file) != 0) attacks |= (Bitboard >> 15);
@@ -82,7 +82,7 @@ fn maskKingAttacks(square: u6) u64 {
     var attacks: u64 = @as(u64, 0);
     var Bitboard: u64 = @as(u64, 0);
 
-    Bitboard = utils.setBit(&Bitboard, square);
+    utils.setBit(&Bitboard, square);
     if ((Bitboard >> 8) != 0) attacks |= (Bitboard >> 8);
     if (((Bitboard >> 9) & not_H_file) != 0) attacks |= (Bitboard >> 9);
     if (((Bitboard >> 7) & not_A_file) != 0) attacks |= (Bitboard >> 7);

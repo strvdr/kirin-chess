@@ -41,7 +41,6 @@ pub const pieceEncoding = enum(u4) { P, N, B, R, Q, K, p, n, b, r, q, k };
 
 pub const asciiPieces: []const u8 = "PNBRQKpnbrqk";
 pub const unicodePieces: [12][]const u8 = .{ "♙", "♘", "♗", "♖", "♕", "♔", "♟︎", "♞", "♝", "♜", "♛", "♚" };
-
 pub const bishopMagicNumbers: [64]u64 = .{
     0x40040822862081,
     0x40810a4108000,
