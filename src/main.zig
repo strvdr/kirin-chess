@@ -24,60 +24,8 @@ pub fn main() !void {
     var bw = std.io.bufferedWriter(stdout_file);
 
     attacks.initAll();
-
-    //set white pawns
-    utils.setBit(&bitboard.bitboards[@intFromEnum(bitboard.pieceEncoding.P)], @intFromEnum(bitboard.boardSquares.a2));
-    utils.setBit(&bitboard.bitboards[@intFromEnum(bitboard.pieceEncoding.P)], @intFromEnum(bitboard.boardSquares.b2));
-    utils.setBit(&bitboard.bitboards[@intFromEnum(bitboard.pieceEncoding.P)], @intFromEnum(bitboard.boardSquares.c2));
-    utils.setBit(&bitboard.bitboards[@intFromEnum(bitboard.pieceEncoding.P)], @intFromEnum(bitboard.boardSquares.d2));
-    utils.setBit(&bitboard.bitboards[@intFromEnum(bitboard.pieceEncoding.P)], @intFromEnum(bitboard.boardSquares.e2));
-    utils.setBit(&bitboard.bitboards[@intFromEnum(bitboard.pieceEncoding.P)], @intFromEnum(bitboard.boardSquares.f2));
-    utils.setBit(&bitboard.bitboards[@intFromEnum(bitboard.pieceEncoding.P)], @intFromEnum(bitboard.boardSquares.g2));
-    utils.setBit(&bitboard.bitboards[@intFromEnum(bitboard.pieceEncoding.P)], @intFromEnum(bitboard.boardSquares.h2));
-
-    //set white knights
-    utils.setBit(&bitboard.bitboards[@intFromEnum(bitboard.pieceEncoding.N)], @intFromEnum(bitboard.boardSquares.b1));
-    utils.setBit(&bitboard.bitboards[@intFromEnum(bitboard.pieceEncoding.N)], @intFromEnum(bitboard.boardSquares.g1));
-
-    //set white bishop
-    utils.setBit(&bitboard.bitboards[@intFromEnum(bitboard.pieceEncoding.B)], @intFromEnum(bitboard.boardSquares.c1));
-    utils.setBit(&bitboard.bitboards[@intFromEnum(bitboard.pieceEncoding.B)], @intFromEnum(bitboard.boardSquares.f1));
-
-    //set white rook
-    utils.setBit(&bitboard.bitboards[@intFromEnum(bitboard.pieceEncoding.R)], @intFromEnum(bitboard.boardSquares.h1));
-    utils.setBit(&bitboard.bitboards[@intFromEnum(bitboard.pieceEncoding.R)], @intFromEnum(bitboard.boardSquares.a1));
-
-    //set white queen and king
-    utils.setBit(&bitboard.bitboards[@intFromEnum(bitboard.pieceEncoding.Q)], @intFromEnum(bitboard.boardSquares.d1));
-    utils.setBit(&bitboard.bitboards[@intFromEnum(bitboard.pieceEncoding.K)], @intFromEnum(bitboard.boardSquares.e1));
-
-    //set black pawns
-    utils.setBit(&bitboard.bitboards[@intFromEnum(bitboard.pieceEncoding.p)], @intFromEnum(bitboard.boardSquares.a7));
-    utils.setBit(&bitboard.bitboards[@intFromEnum(bitboard.pieceEncoding.p)], @intFromEnum(bitboard.boardSquares.b7));
-    utils.setBit(&bitboard.bitboards[@intFromEnum(bitboard.pieceEncoding.p)], @intFromEnum(bitboard.boardSquares.c7));
-    utils.setBit(&bitboard.bitboards[@intFromEnum(bitboard.pieceEncoding.p)], @intFromEnum(bitboard.boardSquares.d7));
-    utils.setBit(&bitboard.bitboards[@intFromEnum(bitboard.pieceEncoding.p)], @intFromEnum(bitboard.boardSquares.e7));
-    utils.setBit(&bitboard.bitboards[@intFromEnum(bitboard.pieceEncoding.p)], @intFromEnum(bitboard.boardSquares.f7));
-    utils.setBit(&bitboard.bitboards[@intFromEnum(bitboard.pieceEncoding.p)], @intFromEnum(bitboard.boardSquares.g7));
-    utils.setBit(&bitboard.bitboards[@intFromEnum(bitboard.pieceEncoding.p)], @intFromEnum(bitboard.boardSquares.h7));
-
-    //set white knights
-    utils.setBit(&bitboard.bitboards[@intFromEnum(bitboard.pieceEncoding.n)], @intFromEnum(bitboard.boardSquares.b8));
-    utils.setBit(&bitboard.bitboards[@intFromEnum(bitboard.pieceEncoding.n)], @intFromEnum(bitboard.boardSquares.g8));
-
-    //set white bishop
-    utils.setBit(&bitboard.bitboards[@intFromEnum(bitboard.pieceEncoding.b)], @intFromEnum(bitboard.boardSquares.c8));
-    utils.setBit(&bitboard.bitboards[@intFromEnum(bitboard.pieceEncoding.b)], @intFromEnum(bitboard.boardSquares.f8));
-
-    //set white rook
-    utils.setBit(&bitboard.bitboards[@intFromEnum(bitboard.pieceEncoding.r)], @intFromEnum(bitboard.boardSquares.h8));
-    utils.setBit(&bitboard.bitboards[@intFromEnum(bitboard.pieceEncoding.r)], @intFromEnum(bitboard.boardSquares.a8));
-
-    //set white queen and king
-    utils.setBit(&bitboard.bitboards[@intFromEnum(bitboard.pieceEncoding.q)], @intFromEnum(bitboard.boardSquares.d8));
-    utils.setBit(&bitboard.bitboards[@intFromEnum(bitboard.pieceEncoding.k)], @intFromEnum(bitboard.boardSquares.e8));
-
-    bitboard.sideToMove = @intFromEnum(bitboard.side.white);
+    bitboard.initNewGame();
+    utils.parseFEN(bitboard.kiwiPete);
     utils.printBoard();
     try bw.flush(); // Don't forget to flush!
 }

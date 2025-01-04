@@ -14,6 +14,7 @@
 // along with Kirin Chess.  If not, see <https://www.gnu.org/licenses/>.
 
 const std = @import("std");
+const utils = @import("utils.zig");
 const bb = @import("bitboard.zig");
 const assert = std.debug.assert;
 
@@ -113,5 +114,124 @@ pub fn printBoard() void {
     }
     std.debug.print("\n     a b c d e f g h\n\n", .{});
     const side = if (bb.sideToMove == 0) "white" else "black";
-    std.debug.print("Side: {s}", .{side});
+    std.debug.print("Side: {s}\n", .{side});
+    if (bb.enpassant != @intFromEnum(bb.boardSquares.noSquare)) {
+        std.debug.print("Enpassant: {s}\n", .{bb.squareCoordinates[bb.enpassant]});
+    } else {
+        std.debug.print("Enpassant: no\n", .{});
+    }
+
+    std.debug.print("Castling: ", .{});
+    if ((bb.castle & @intFromEnum(bb.castlingRights.wk)) != 0) {
+        std.debug.print("K", .{});
+    } else {
+        std.debug.print("-", .{});
+    }
+
+    if ((bb.castle & @intFromEnum(bb.castlingRights.wq)) != 0) {
+        std.debug.print("Q", .{});
+    } else {
+        std.debug.print("-", .{});
+    }
+    if ((bb.castle & @intFromEnum(bb.castlingRights.bk)) != 0) {
+        std.debug.print("k", .{});
+    } else {
+        std.debug.print("-", .{});
+    }
+    if ((bb.castle & @intFromEnum(bb.castlingRights.wq)) != 0) {
+        std.debug.print("q", .{});
+    } else {
+        std.debug.print("-", .{});
+    }
+}
+
+pub fn parseFEN(fen: []const u8) void {
+    // Reset board state
+    @memset(bb.bitboards[0..], 0);
+    @memset(bb.occupancies[0..], 0);
+    bb.sideToMove = 0;
+    bb.enpassant = @intFromEnum(bb.boardSquares.noSquare);
+    bb.castle = 0;
+
+    var fenIndex: usize = 0;
+    var fileIndex: usize = 0;
+
+    // Parse piece positions
+    for (0..8) |rank| {
+        fileIndex = 0;
+        while (fileIndex < 8) {
+            const square: u6 = @intCast(rank * 8 + fileIndex);
+
+            // Handle pieces
+            if ((fen[fenIndex] >= 'a' and fen[fenIndex] <= 'z') or
+                (fen[fenIndex] >= 'A' and fen[fenIndex] <= 'Z'))
+            {
+                const piece: u8 = bb.charPieces[fen[fenIndex]];
+                utils.setBit(&bb.bitboards[piece], square);
+                fenIndex += 1;
+                fileIndex += 1;
+            }
+
+            // Handle empty squares
+            else if (fen[fenIndex] >= '0' and fen[fenIndex] <= '9') {
+                const offset = fen[fenIndex] - '0';
+                fileIndex += offset; // -1 because the loop will increment file
+                fenIndex += 1;
+            }
+
+            // Handle rank separator
+            else if (fen[fenIndex] == '/') {
+                fenIndex += 1;
+                break; // Move to next rank
+            }
+        }
+    }
+
+    // Skip to side to move
+    fenIndex += 1;
+
+    // Parse side to move
+    bb.sideToMove = if (fen[fenIndex] == 'w') @intFromEnum(bb.side.white) else @intFromEnum(bb.side.black);
+
+    // Skip to castling rights
+    fenIndex += 2;
+
+    // Parse castling rights
+    while (fen[fenIndex] != ' ') : (fenIndex += 1) {
+        switch (fen[fenIndex]) {
+            'K' => bb.castle |= @intFromEnum(bb.castlingRights.wk),
+            'Q' => bb.castle |= @intFromEnum(bb.castlingRights.wq),
+            'k' => bb.castle |= @intFromEnum(bb.castlingRights.bk),
+            'q' => bb.castle |= @intFromEnum(bb.castlingRights.bq),
+            '-' => {},
+            else => {},
+        }
+    }
+
+    // Skip to en passant square
+    fenIndex += 1;
+
+    // Parse en passant square
+    if (fen[fenIndex] != '-') {
+        const file_val: i32 = fen[fenIndex] - 'a';
+        const rank_val: i32 = 8 - (@as(i32, fen[fenIndex + 1] -% '0'));
+
+        if (file_val >= 0 and file_val < 8 and
+            rank_val >= 0 and rank_val < 8)
+        {
+            const file: i8 = @intCast(file_val);
+            const rank: i8 = @intCast(rank_val);
+            bb.enpassant = @intCast(rank * 8 + file);
+        }
+    }
+
+    for (@intFromEnum(bb.pieceEncoding.P)..@intFromEnum(bb.pieceEncoding.K) + 1) |piece| {
+        bb.occupancies[@intFromEnum(bb.side.white)] |= bb.bitboards[piece];
+    }
+
+    for (@intFromEnum(bb.pieceEncoding.p)..@intFromEnum(bb.pieceEncoding.k) + 1) |piece| {
+        bb.occupancies[@intFromEnum(bb.side.black)] |= bb.bitboards[piece];
+    }
+
+    bb.occupancies[@intFromEnum(bb.side.both)] = bb.occupancies[@intFromEnum(bb.side.white)] | bb.occupancies[@intFromEnum(bb.side.black)];
 }
