@@ -24,8 +24,15 @@ pub fn main() !void {
     var bw = std.io.bufferedWriter(stdout_file);
 
     attacks.initAll();
-    bitboard.initNewGame();
-    utils.parseFEN(bitboard.kiwiPete);
-    utils.printBoard();
+    const occupancy: u64 = 0;
+    utils.printBitboard(attacks.getRookAttacks(@intFromEnum(bitboard.boardSquares.a1), occupancy));
+    utils.printBitboard(attacks.getQueenAttacks(@intFromEnum(bitboard.boardSquares.d4), occupancy));
+    //for (0..64) |index| {
+    //    const square: u6 = @intCast(index);
+    //    utils.printBitboard(attacks.getRookAttacks(square, occupancy));
+    //}
+    //bitboard.initNewGame();
+    //utils.parseFEN(bitboard.startPosition);
+    //utils.printBoard();
     try bw.flush(); // Don't forget to flush!
 }
