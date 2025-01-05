@@ -19,7 +19,7 @@ const attacks = @import("attacks.zig");
 const utils = @import("utils.zig");
 
 fn getRandomNumberU32() u32 {
-    var number: u32 = bitboard.state;
+    var number: u32 = @intCast(bitboard.state);
 
     number ^= number << 13;
     number ^= number >> 17;
@@ -56,7 +56,7 @@ fn findMagicNumber(square: u6, relevantBits: u5, bishop: bool) u64 {
         attackMask = attacks.maskRookAttacks(square);
     }
 
-    const occupancyIndicies: u32 = @as(u32, 1) << relevantBits;
+    const occupancyIndicies: u64 = @as(u64, 1) << relevantBits;
 
     for (0..occupancyIndicies) |index| {
         occupancies[index] = utils.setOccupancy(@intCast(index), relevantBits, attackMask);
@@ -78,7 +78,7 @@ fn findMagicNumber(square: u6, relevantBits: u5, bishop: bool) u64 {
         var fail: bool = false;
 
         while (!fail and index < occupancyIndicies) {
-            const magicIndex: u32 = @intCast((occupancies[index] *% magicNumber) >> @intCast(64 - @as(u8, relevantBits)));
+            const magicIndex: u64 = @intCast((occupancies[index] *% magicNumber) >> @intCast(64 - @as(u8, relevantBits)));
 
             if (usedAttacks[magicIndex] == 0) {
                 usedAttacks[magicIndex] = unusedAttacks[index];
@@ -102,7 +102,7 @@ fn initMagicNumbers() void {
     }
     std.debug.print("rook:\n", .{});
     for (0..64) |square| {
-        const result: u64 = findMagicNumber(@intCast(square), bitboard.rookRelevantBits[square], true);
+        const result: u64 = findMagicNumber(@intCast(square), bitboard.rookRelevantBits[square], false);
         std.debug.print(" 0x{x},\n", .{result});
     }
 }

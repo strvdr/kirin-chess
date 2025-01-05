@@ -51,7 +51,7 @@ pub fn getLSBindex(bitboard: u64) i8 {
     }
 }
 
-pub fn setOccupancy(index: u32, bitsInMask: u6, attackMask: u64) u64 {
+pub fn setOccupancy(index: u64, bitsInMask: u6, attackMask: u64) u64 {
     var occupancy: u64 = @as(u64, 0);
     var attackMaskCopy = attackMask;
     for (0..bitsInMask) |count| {

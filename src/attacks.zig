@@ -307,7 +307,8 @@ fn initSliderAttacks(bishop: bool) void {
         }
 
         const relevantBits = utils.countBits(attackMask);
-        const occupancyIndicies = @as(u64, 1) << @intCast(relevantBits);
+        const occupancyIndicies = @as(u64, 1) << relevantBits;
+
         var occupancy: u64 = undefined;
         var magicIndex: u64 = undefined;
 
@@ -318,8 +319,8 @@ fn initSliderAttacks(bishop: bool) void {
                 bishopAttacks[square][magicIndex] = bishopAttacksOTF(@intCast(square), occupancy);
             } else {
                 occupancy = utils.setOccupancy(@intCast(index), relevantBits, attackMask);
-                magicIndex = ((occupancy & rookMasks[square]) *% bitboard.rookMagicNumbers[square]) >> @intCast(64 - @as(u8, bitboard.rookRelevantBits[square]));
-                rookAttacks[square][magicIndex] = rookAttacksOTF(@intCast(square), occupancy);
+                magicIndex = (occupancy *% bitboard.rookMagicNumbers[square]) >> @intCast(64 - @as(u8, bitboard.rookRelevantBits[square]));
+                rookAttacks[square][@intCast(magicIndex)] = rookAttacksOTF(@intCast(square), occupancy);
             }
         }
     }
@@ -337,33 +338,12 @@ fn getBishopAttacks(square: u6, occupancy: u64) u64 {
 
 pub fn getRookAttacks(square: u6, occupancy: u64) u64 {
     var occupancyCopy = occupancy;
-    std.debug.print("\nGetting rook attacks for square {d}\n", .{square});
-    std.debug.print("Initial occupancy: {b:0>64}\n", .{occupancyCopy});
-
-    // For comparison, let's see what OTF generates
-    const otfAttacks = rookAttacksOTF(square, occupancy);
-    std.debug.print("On-the-fly attacks: {b:0>64}\n", .{otfAttacks});
 
     occupancyCopy &= rookMasks[square];
-    std.debug.print("Rook mask for square: {b:0>64}\n", .{rookMasks[square]});
-    std.debug.print("After masking: {b:0>64}\n", .{occupancyCopy});
+    occupancyCopy *%= bitboard.rookMagicNumbers[square];
+    occupancyCopy >>= @intCast(64 - @as(u8, bitboard.rookRelevantBits[square]));
 
-    const magicNumber = bitboard.rookMagicNumbers[square];
-    std.debug.print("Magic number: {x}\n", .{magicNumber});
-
-    occupancyCopy *%= magicNumber;
-    std.debug.print("After magic multiply: {b:0>64}\n", .{occupancyCopy});
-
-    const shift = 64 - @as(u8, bitboard.rookRelevantBits[square]);
-    std.debug.print("Shift amount: {d}\n", .{shift});
-
-    occupancyCopy >>= @intCast(shift);
-    std.debug.print("After right shift (index): {d}\n", .{occupancyCopy});
-
-    const result = rookAttacks[square][occupancyCopy];
-    std.debug.print("Final lookup result: {b:0>64}\n", .{result});
-
-    return result;
+    return rookAttacks[square][occupancyCopy];
 }
 
 pub fn getQueenAttacks(square: u6, occupancy: u64) u64 {
