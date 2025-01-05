@@ -356,8 +356,8 @@ pub fn initNewGame() void {
     utils.setBit(&bitboards[@intFromEnum(pieceEncoding.q)], @intFromEnum(boardSquares.d8));
     utils.setBit(&bitboards[@intFromEnum(pieceEncoding.k)], @intFromEnum(boardSquares.e8));
 
-    sideToMove = @intFromEnum(side.black);
-    enpassant = @intFromEnum(boardSquares.e3);
+    sideToMove = @intFromEnum(side.white);
+    enpassant = @intFromEnum(boardSquares.noSquare);
     castle |= @intFromEnum(castlingRights.wk);
     castle |= @intFromEnum(castlingRights.wq);
     castle |= @intFromEnum(castlingRights.bk);

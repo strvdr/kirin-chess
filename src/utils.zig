@@ -182,7 +182,6 @@ pub fn parseFEN(fen: []const u8) void {
             // Handle rank separator
             else if (fen[fenIndex] == '/') {
                 fenIndex += 1;
-                break; // Move to next rank
             }
         }
     }
