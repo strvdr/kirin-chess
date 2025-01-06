@@ -24,13 +24,8 @@ pub fn main() !void {
     var bw = std.io.bufferedWriter(stdout_file);
 
     attacks.initAll();
-    var occupancy: u64 = 0;
-    utils.printBitboard(attacks.getRookAttacks(@intFromEnum(bitboard.boardSquares.a1), occupancy));
-    utils.printBitboard(attacks.getQueenAttacks(@intFromEnum(bitboard.boardSquares.d4), occupancy));
-    utils.setBit(&occupancy, @intFromEnum(bitboard.boardSquares.g4));
-    utils.printBitboard(attacks.getQueenAttacks(@intFromEnum(bitboard.boardSquares.d4), occupancy));
-    //bitboard.initNewGame();
-    //utils.parseFEN(bitboard.startPosition);
-    //utils.printBoard();
+    utils.parseFEN(bitboard.startPosition);
+    utils.printBoard();
+    attacks.printAttackedSquares(@intFromEnum(bitboard.side.black));
     try bw.flush(); // Don't forget to flush!
 }

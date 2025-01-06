@@ -336,7 +336,7 @@ fn getBishopAttacks(square: u6, occupancy: u64) u64 {
     return bishopAttacks[square][occupancyCopy];
 }
 
-pub fn getRookAttacks(square: u6, occupancy: u64) u64 {
+fn getRookAttacks(square: u6, occupancy: u64) u64 {
     var occupancyCopy = occupancy;
 
     occupancyCopy &= rookMasks[square];
@@ -346,8 +346,50 @@ pub fn getRookAttacks(square: u6, occupancy: u64) u64 {
     return rookAttacks[square][occupancyCopy];
 }
 
-pub fn getQueenAttacks(square: u6, occupancy: u64) u64 {
+fn getQueenAttacks(square: u6, occupancy: u64) u64 {
     return getBishopAttacks(square, occupancy) | getRookAttacks(square, occupancy);
+}
+
+fn isSquareAttacked(square: u6, side: u2) bool {
+    //attacked by white pawns
+    if ((side == @intFromEnum(bitboard.side.white) and ((pawnAttacks[@intFromEnum(bitboard.side.black)][square] & bitboard.bitboards[@intFromEnum(bitboard.pieceEncoding.P)])) != 0)) return true;
+
+    //attacked by black pawns
+    if ((side == @intFromEnum(bitboard.side.black) and ((pawnAttacks[@intFromEnum(bitboard.side.white)][square] & bitboard.bitboards[@intFromEnum(bitboard.pieceEncoding.p)])) != 0)) return true;
+
+    //attacked by knights
+    if ((knightAttacks[square] & (if (side == @intFromEnum(bitboard.side.white)) bitboard.bitboards[@intFromEnum(bitboard.pieceEncoding.N)] else bitboard.bitboards[@intFromEnum(bitboard.pieceEncoding.n)])) != 0) return true;
+
+    //attacked by bishops
+    if ((getBishopAttacks(square, bitboard.occupancies[@intFromEnum(bitboard.side.both)]) & (if (side == @intFromEnum(bitboard.side.white)) bitboard.bitboards[@intFromEnum(bitboard.pieceEncoding.B)] else bitboard.bitboards[@intFromEnum(bitboard.pieceEncoding.b)])) != 0) return true;
+
+    //attacked by rooks
+    if ((getRookAttacks(square, bitboard.occupancies[@intFromEnum(bitboard.side.both)]) & (if (side == @intFromEnum(bitboard.side.white)) bitboard.bitboards[@intFromEnum(bitboard.pieceEncoding.R)] else bitboard.bitboards[@intFromEnum(bitboard.pieceEncoding.r)])) != 0) return true;
+
+    //attacked by queens
+    if ((getQueenAttacks(square, bitboard.occupancies[@intFromEnum(bitboard.side.both)]) & (if (side == @intFromEnum(bitboard.side.white)) bitboard.bitboards[@intFromEnum(bitboard.pieceEncoding.Q)] else bitboard.bitboards[@intFromEnum(bitboard.pieceEncoding.q)])) != 0) return true;
+
+    //attacked by kings
+    if ((kingAttacks[square] & (if (side == @intFromEnum(bitboard.side.white)) bitboard.bitboards[@intFromEnum(bitboard.pieceEncoding.K)] else bitboard.bitboards[@intFromEnum(bitboard.pieceEncoding.k)])) != 0) return true;
+
+    return false;
+}
+
+pub fn printAttackedSquares(side: u2) void {
+    std.debug.print("\n", .{});
+    for (0..8) |rank| {
+        for (0..8) |file| {
+            const square: u6 = @intCast(rank * 8 + file);
+            if (file == 0) {
+                std.debug.print("   {d} ", .{@as(usize, 8) - rank});
+            }
+            const result: u1 = if (isSquareAttacked(square, side)) 1 else 0;
+            std.debug.print(" {d}", .{result});
+            //std.debug.print("is {s} attacked by {s}: {s}\n", .{ bitboard.squareCoordinates[square], if (side != 0) "black" else "white", if (isSquareAttacked(square, side)) "yes" else "no" });
+        }
+        std.debug.print("\n", .{});
+    }
+    std.debug.print("\n     a b c d e f g h\n\n", .{});
 }
 
 pub fn initAll() void {
