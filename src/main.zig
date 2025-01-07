@@ -18,14 +18,14 @@ const utils = @import("utils.zig");
 const bitboard = @import("bitboard.zig");
 const attacks = @import("attacks.zig");
 const magic = @import("magics.zig");
-
+const movegen = @import("movegen.zig");
 pub fn main() !void {
     const stdout_file = std.io.getStdOut().writer();
     var bw = std.io.bufferedWriter(stdout_file);
 
     attacks.initAll();
-    utils.parseFEN(bitboard.startPosition);
+    utils.parseFEN("r3k2r/pPppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R b KQkq - 0 1 ");
     utils.printBoard();
-    attacks.printAttackedSquares(@intFromEnum(bitboard.side.black));
+    movegen.generateMoves();
     try bw.flush(); // Don't forget to flush!
 }

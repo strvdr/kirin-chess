@@ -143,6 +143,7 @@ pub fn printBoard() void {
     } else {
         std.debug.print("-", .{});
     }
+    std.debug.print("\n", .{});
 }
 
 pub fn parseFEN(fen: []const u8) void {
