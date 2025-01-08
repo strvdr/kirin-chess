@@ -326,7 +326,7 @@ fn initSliderAttacks(bishop: bool) void {
     }
 }
 
-fn getBishopAttacks(square: u6, occupancy: u64) u64 {
+pub fn getBishopAttacks(square: u6, occupancy: u64) u64 {
     var occupancyCopy = occupancy;
 
     occupancyCopy &= bishopMasks[square];
@@ -350,7 +350,7 @@ fn getQueenAttacks(square: u6, occupancy: u64) u64 {
     return getBishopAttacks(square, occupancy) | getRookAttacks(square, occupancy);
 }
 
-fn isSquareAttacked(square: u6, side: u2) bool {
+pub fn isSquareAttacked(square: u6, side: u2) bool {
     //attacked by white pawns
     if ((side == @intFromEnum(bitboard.side.white) and ((pawnAttacks[@intFromEnum(bitboard.side.black)][square] & bitboard.bitboards[@intFromEnum(bitboard.pieceEncoding.P)])) != 0)) return true;
 

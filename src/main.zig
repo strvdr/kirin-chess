@@ -24,7 +24,7 @@ pub fn main() !void {
     var bw = std.io.bufferedWriter(stdout_file);
 
     attacks.initAll();
-    utils.parseFEN("r3k2r/p1ppqpb1/bn2pnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPpP/R3K2R b KQkq a3 0 1 ");
+    utils.parseFEN("r3k2r/p1ppqpb1/bn2pnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R b KQkq - 0 1 ");
     utils.printBoard();
     movegen.generateMoves();
     try bw.flush(); // Don't forget to flush!
