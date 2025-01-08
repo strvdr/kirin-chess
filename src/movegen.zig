@@ -1,3 +1,18 @@
+// This file is part of the Kirin Chess project.
+//
+// Kirin Chess is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Kirin Chess is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Kirin Chess.  If not, see <https://www.gnu.org/licenses/>.
+
 const std = @import("std");
 const bitboard = @import("bitboard.zig");
 const utils = @import("utils.zig");
@@ -387,4 +402,52 @@ pub fn generateMoves() void {
             }
         }
     }
+}
+
+// binary move bits                               hexidecimal constants
+//
+//    0000 0000 0000 0000 0011 1111    source square       0x3f
+//    0000 0000 0000 1111 1100 0000    target square       0xfc0
+//    0000 0000 1111 0000 0000 0000    piece               0xf000
+//    0000 1111 0000 0000 0000 0000    promoted piece      0xf0000
+//    0001 0000 0000 0000 0000 0000    capture flag        0x100000
+//    0010 0000 0000 0000 0000 0000    double push flag    0x200000
+//    0100 0000 0000 0000 0000 0000    enpassant flag      0x400000
+//    1000 0000 0000 0000 0000 0000    castling flag       0x800000
+
+//only needs to return 24 bits, throw out the extra 8 bits (MSB)
+pub fn encodeMove(source: u32, target: u32, piece: u32, promoted: u32, capture: u32, double: u32, enpassant: u32, castling: u32) u32 {
+    return source | (target << 6) | (piece << 12) | (promoted << 16) | (capture << 20) | (double << 21) | (enpassant << 22) | (castling << 23);
+}
+
+pub fn decodeMoveSource(move: u32) u32 {
+    return move & 0x3f;
+}
+
+pub fn decodeMoveTarget(move: u32) u32 {
+    return (move & 0xfc0) >> 6;
+}
+
+pub fn decodeMovePiece(move: u32) u32 {
+    return (move & 0xf000) >> 12;
+}
+
+pub fn decodeMovePromoted(move: u32) u32 {
+    return (move & 0xf0000) >> 16;
+}
+
+pub fn decodeMoveCapture(move: u32) u32 {
+    return (move & 0x100000) >> 20;
+}
+
+pub fn decodeMoveDouble(move: u32) u32 {
+    return (move & 0x200000) >> 21;
+}
+
+pub fn decodeMoveEnpassant(move: u32) u32 {
+    return (move & 0x400000) >> 22;
+}
+
+pub fn decodeMoveCastling(move: u32) u32 {
+    return (move & 0x800000) >> 23;
 }
