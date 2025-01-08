@@ -420,34 +420,34 @@ pub fn encodeMove(source: u32, target: u32, piece: u32, promoted: u32, capture: 
     return source | (target << 6) | (piece << 12) | (promoted << 16) | (capture << 20) | (double << 21) | (enpassant << 22) | (castling << 23);
 }
 
-pub fn decodeMoveSource(move: u32) u32 {
+fn decodeMoveSource(move: u32) u32 {
     return move & 0x3f;
 }
 
-pub fn decodeMoveTarget(move: u32) u32 {
+fn decodeMoveTarget(move: u32) u32 {
     return (move & 0xfc0) >> 6;
 }
 
-pub fn decodeMovePiece(move: u32) u32 {
+fn decodeMovePiece(move: u32) u32 {
     return (move & 0xf000) >> 12;
 }
 
-pub fn decodeMovePromoted(move: u32) u32 {
+fn decodeMovePromoted(move: u32) u32 {
     return (move & 0xf0000) >> 16;
 }
 
-pub fn decodeMoveCapture(move: u32) u32 {
+fn decodeMoveCapture(move: u32) u32 {
     return (move & 0x100000) >> 20;
 }
 
-pub fn decodeMoveDouble(move: u32) u32 {
+fn decodeMoveDouble(move: u32) u32 {
     return (move & 0x200000) >> 21;
 }
 
-pub fn decodeMoveEnpassant(move: u32) u32 {
+fn decodeMoveEnpassant(move: u32) u32 {
     return (move & 0x400000) >> 22;
 }
 
-pub fn decodeMoveCastling(move: u32) u32 {
+fn decodeMoveCastling(move: u32) u32 {
     return (move & 0x800000) >> 23;
 }
