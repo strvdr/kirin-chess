@@ -214,6 +214,133 @@ fn generateBishopMoves(bishopBitboard: u64, side: u2) void {
         }
     }
 }
+
+fn generateRookMoves(rookBitboard: u64, side: u2) void {
+    var bitboardCopy = rookBitboard;
+    var sourceSquare: u6 = undefined;
+    var targetSquare: u6 = undefined;
+    var attacks: u64 = undefined;
+
+    if (side == @intFromEnum(bitboard.side.white)) {
+        while (bitboardCopy != 0) {
+            sourceSquare = @intCast(utils.getLSBindex(bitboardCopy));
+            attacks = atk.getRookAttacks(sourceSquare, bitboard.occupancies[@intFromEnum(bitboard.side.both)]) & ~bitboard.occupancies[@intFromEnum(bitboard.side.white)];
+            while (attacks != 0) {
+                targetSquare = @intCast(utils.getLSBindex(attacks));
+                if (utils.getBit(bitboard.occupancies[@intFromEnum(bitboard.side.black)], targetSquare) == 0) {
+                    std.debug.print("{s}{s} white rook quiet move\n", .{ bitboard.squareCoordinates[sourceSquare], bitboard.squareCoordinates[targetSquare] });
+                } else {
+                    std.debug.print("{s}{s} white rook capture move\n", .{ bitboard.squareCoordinates[sourceSquare], bitboard.squareCoordinates[targetSquare] });
+                }
+                utils.popBit(&attacks, targetSquare);
+            }
+
+            utils.popBit(&bitboardCopy, sourceSquare);
+        }
+    }
+    if (side == @intFromEnum(bitboard.side.black)) {
+        while (bitboardCopy != 0) {
+            sourceSquare = @intCast(utils.getLSBindex(bitboardCopy));
+            attacks = atk.getRookAttacks(sourceSquare, bitboard.occupancies[@intFromEnum(bitboard.side.both)]) & ~bitboard.occupancies[@intFromEnum(bitboard.side.black)];
+            while (attacks != 0) {
+                targetSquare = @intCast(utils.getLSBindex(attacks));
+                if (utils.getBit(bitboard.occupancies[@intFromEnum(bitboard.side.white)], targetSquare) == 0) {
+                    std.debug.print("{s}{s} black rook quiet move\n", .{ bitboard.squareCoordinates[sourceSquare], bitboard.squareCoordinates[targetSquare] });
+                } else {
+                    std.debug.print("{s}{s} black rook capture move\n", .{ bitboard.squareCoordinates[sourceSquare], bitboard.squareCoordinates[targetSquare] });
+                }
+                utils.popBit(&attacks, targetSquare);
+            }
+
+            utils.popBit(&bitboardCopy, sourceSquare);
+        }
+    }
+}
+
+fn generateQueenMoves(queenBitboard: u64, side: u2) void {
+    var bitboardCopy = queenBitboard;
+    var sourceSquare: u6 = undefined;
+    var targetSquare: u6 = undefined;
+    var attacks: u64 = undefined;
+
+    if (side == @intFromEnum(bitboard.side.white)) {
+        while (bitboardCopy != 0) {
+            sourceSquare = @intCast(utils.getLSBindex(bitboardCopy));
+            attacks = atk.getQueenAttacks(sourceSquare, bitboard.occupancies[@intFromEnum(bitboard.side.both)]) & ~bitboard.occupancies[@intFromEnum(bitboard.side.white)];
+            while (attacks != 0) {
+                targetSquare = @intCast(utils.getLSBindex(attacks));
+                if (utils.getBit(bitboard.occupancies[@intFromEnum(bitboard.side.black)], targetSquare) == 0) {
+                    std.debug.print("{s}{s} white queen quiet move\n", .{ bitboard.squareCoordinates[sourceSquare], bitboard.squareCoordinates[targetSquare] });
+                } else {
+                    std.debug.print("{s}{s} white queen capture move\n", .{ bitboard.squareCoordinates[sourceSquare], bitboard.squareCoordinates[targetSquare] });
+                }
+                utils.popBit(&attacks, targetSquare);
+            }
+
+            utils.popBit(&bitboardCopy, sourceSquare);
+        }
+    }
+    if (side == @intFromEnum(bitboard.side.black)) {
+        while (bitboardCopy != 0) {
+            sourceSquare = @intCast(utils.getLSBindex(bitboardCopy));
+            attacks = atk.getQueenAttacks(sourceSquare, bitboard.occupancies[@intFromEnum(bitboard.side.both)]) & ~bitboard.occupancies[@intFromEnum(bitboard.side.black)];
+            while (attacks != 0) {
+                targetSquare = @intCast(utils.getLSBindex(attacks));
+                if (utils.getBit(bitboard.occupancies[@intFromEnum(bitboard.side.white)], targetSquare) == 0) {
+                    std.debug.print("{s}{s} black queen quiet move\n", .{ bitboard.squareCoordinates[sourceSquare], bitboard.squareCoordinates[targetSquare] });
+                } else {
+                    std.debug.print("{s}{s} black queen capture move\n", .{ bitboard.squareCoordinates[sourceSquare], bitboard.squareCoordinates[targetSquare] });
+                }
+                utils.popBit(&attacks, targetSquare);
+            }
+
+            utils.popBit(&bitboardCopy, sourceSquare);
+        }
+    }
+}
+
+fn generateKingMoves(kingBitboard: u64, side: u2) void {
+    var bitboardCopy = kingBitboard;
+    var sourceSquare: u6 = undefined;
+    var targetSquare: u6 = undefined;
+    var attacks: u64 = undefined;
+
+    if (side == @intFromEnum(bitboard.side.white)) {
+        while (bitboardCopy != 0) {
+            sourceSquare = @intCast(utils.getLSBindex(bitboardCopy));
+            attacks = atk.kingAttacks[sourceSquare] & ~bitboard.occupancies[@intFromEnum(bitboard.side.white)];
+            while (attacks != 0) {
+                targetSquare = @intCast(utils.getLSBindex(attacks));
+                if (utils.getBit(bitboard.occupancies[@intFromEnum(bitboard.side.black)], targetSquare) == 0) {
+                    std.debug.print("{s}{s} white king quiet move\n", .{ bitboard.squareCoordinates[sourceSquare], bitboard.squareCoordinates[targetSquare] });
+                } else {
+                    std.debug.print("{s}{s} white king capture move\n", .{ bitboard.squareCoordinates[sourceSquare], bitboard.squareCoordinates[targetSquare] });
+                }
+                utils.popBit(&attacks, targetSquare);
+            }
+
+            utils.popBit(&bitboardCopy, sourceSquare);
+        }
+    }
+    if (side == @intFromEnum(bitboard.side.black)) {
+        while (bitboardCopy != 0) {
+            sourceSquare = @intCast(utils.getLSBindex(bitboardCopy));
+            attacks = atk.kingAttacks[sourceSquare] & ~bitboard.occupancies[@intFromEnum(bitboard.side.black)];
+            while (attacks != 0) {
+                targetSquare = @intCast(utils.getLSBindex(attacks));
+                if (utils.getBit(bitboard.occupancies[@intFromEnum(bitboard.side.white)], targetSquare) == 0) {
+                    std.debug.print("{s}{s} black king quiet move\n", .{ bitboard.squareCoordinates[sourceSquare], bitboard.squareCoordinates[targetSquare] });
+                } else {
+                    std.debug.print("{s}{s} black king capture move\n", .{ bitboard.squareCoordinates[sourceSquare], bitboard.squareCoordinates[targetSquare] });
+                }
+                utils.popBit(&attacks, targetSquare);
+            }
+
+            utils.popBit(&bitboardCopy, sourceSquare);
+        }
+    }
+}
+
 pub fn generateMoves() void {
     for (0..12) |piece| {
         const bitboardCopy: u64 = bitboard.bitboards[piece];
@@ -223,12 +350,19 @@ pub fn generateMoves() void {
             }
             if (piece == @intFromEnum(bitboard.pieceEncoding.K)) {
                 generateCastlingMoves(@intFromEnum(bitboard.side.white));
+                generateKingMoves(bitboardCopy, @intFromEnum(bitboard.side.white));
             }
             if (piece == @intFromEnum(bitboard.pieceEncoding.N)) {
                 generateKnightMoves(bitboardCopy, @intFromEnum(bitboard.side.white));
             }
             if (piece == @intFromEnum(bitboard.pieceEncoding.B)) {
                 generateBishopMoves(bitboardCopy, @intFromEnum(bitboard.side.white));
+            }
+            if (piece == @intFromEnum(bitboard.pieceEncoding.R)) {
+                generateRookMoves(bitboardCopy, @intFromEnum(bitboard.side.white));
+            }
+            if (piece == @intFromEnum(bitboard.pieceEncoding.Q)) {
+                generateQueenMoves(bitboardCopy, @intFromEnum(bitboard.side.white));
             }
         }
         if (bitboard.sideToMove == @intFromEnum(bitboard.side.black)) {
@@ -237,12 +371,19 @@ pub fn generateMoves() void {
             }
             if (piece == @intFromEnum(bitboard.pieceEncoding.k)) {
                 generateCastlingMoves(@intFromEnum(bitboard.side.black));
+                generateKingMoves(bitboardCopy, @intFromEnum(bitboard.side.black));
             }
             if (piece == @intFromEnum(bitboard.pieceEncoding.n)) {
                 generateKnightMoves(bitboardCopy, @intFromEnum(bitboard.side.black));
             }
             if (piece == @intFromEnum(bitboard.pieceEncoding.b)) {
                 generateBishopMoves(bitboardCopy, @intFromEnum(bitboard.side.black));
+            }
+            if (piece == @intFromEnum(bitboard.pieceEncoding.r)) {
+                generateRookMoves(bitboardCopy, @intFromEnum(bitboard.side.black));
+            }
+            if (piece == @intFromEnum(bitboard.pieceEncoding.q)) {
+                generateQueenMoves(bitboardCopy, @intFromEnum(bitboard.side.black));
             }
         }
     }

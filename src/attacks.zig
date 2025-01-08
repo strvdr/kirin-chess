@@ -336,7 +336,7 @@ pub fn getBishopAttacks(square: u6, occupancy: u64) u64 {
     return bishopAttacks[square][occupancyCopy];
 }
 
-fn getRookAttacks(square: u6, occupancy: u64) u64 {
+pub fn getRookAttacks(square: u6, occupancy: u64) u64 {
     var occupancyCopy = occupancy;
 
     occupancyCopy &= rookMasks[square];
@@ -346,7 +346,7 @@ fn getRookAttacks(square: u6, occupancy: u64) u64 {
     return rookAttacks[square][occupancyCopy];
 }
 
-fn getQueenAttacks(square: u6, occupancy: u64) u64 {
+pub fn getQueenAttacks(square: u6, occupancy: u64) u64 {
     return getBishopAttacks(square, occupancy) | getRookAttacks(square, occupancy);
 }
 
