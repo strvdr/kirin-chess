@@ -138,7 +138,7 @@ fn maskKingAttacks(square: u6) u64 {
     return attacks;
 }
 
-fn maskBishopAttacks(square: u6) u64 {
+pub fn maskBishopAttacks(square: u6) u64 {
     var attacks: u64 = 0;
     const target_rank: i8 = @divFloor(@as(i8, square), 8);
     const target_file: i8 = @mod(@as(i8, square), 8);
@@ -194,7 +194,7 @@ fn maskBishopAttacks(square: u6) u64 {
     return attacks;
 }
 
-fn bishopAttacksOTF(square: u6, block: u64) u64 {
+pub fn bishopAttacksOTF(square: u6, block: u64) u64 {
     var attacks: u64 = 0;
     const target_rank: i8 = @divFloor(@as(i8, square), 8);
     const target_file: i8 = @mod(@as(i8, square), 8);
@@ -258,7 +258,7 @@ fn bishopAttacksOTF(square: u6, block: u64) u64 {
     return attacks;
 }
 
-fn maskRookAttacks(square: u6) u64 {
+pub fn maskRookAttacks(square: u6) u64 {
     var attacks: u64 = 0;
     const target_rank: i8 = @divFloor(@as(i8, square), 8);
     const target_file: i8 = @mod(@as(i8, square), 8);
@@ -298,7 +298,7 @@ fn maskRookAttacks(square: u6) u64 {
     return attacks;
 }
 
-fn rookAttacksOTF(square: u6, block: u64) u64 {
+pub fn rookAttacksOTF(square: u6, block: u64) u64 {
     var attacks: u64 = 0;
     const target_rank: i8 = @divFloor(@as(i8, square), 8);
     const target_file: i8 = @mod(@as(i8, square), 8);
@@ -350,7 +350,7 @@ pub fn getBishopAttacks(square: u6, occupancy: u64, table: *const AttackTable) u
     var occ = occupancy;
     occ &= table.bishop_masks[square];
     occ *%= board.Magic.bishopMagicNumbers[square];
-    occ >>= @intCast(64 - board.Magic.bishopRelevantBits[square]);
+    occ >>= @intCast(@as(u8, 64) - board.Magic.bishopRelevantBits[square]);
     return table.bishop[square][occ];
 }
 
@@ -358,7 +358,7 @@ pub fn getRookAttacks(square: u6, occupancy: u64, table: *const AttackTable) u64
     var occ = occupancy;
     occ &= table.rook_masks[square];
     occ *%= board.Magic.rookMagicNumbers[square];
-    occ >>= @intCast(64 - board.Magic.rookRelevantBits[square]);
+    occ >>= @intCast(@as(u8, 64) - board.Magic.rookRelevantBits[square]);
     return table.rook[square][occ];
 }
 

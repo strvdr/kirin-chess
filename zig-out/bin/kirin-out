@@ -1,130 +1,416 @@
-bishop:
-0x40040822862081,
-0x40810a4108000,
-0x2008008400920040,
-0x61050104000008,
-0x8282021010016100,
-0x41008210400a0001,
-0x3004202104050c0,
-0x22010108410402,
-0x60400862888605,
-0x6311401040228,
-0x80801082000,
-0x802a082080240100,
-0x1860061210016800,
-0x401016010a810,
-0x1000060545201005,
-0x21000c2098280819,
-0x2020004242020200,
-0x4102100490040101,
-0x114012208001500,
-0x108000682004460,
-0x7809000490401000,
-0x420b001601052912,
-0x408c8206100300,
-0x2231001041180110,
-0x8010102008a02100,
-0x204201004080084,
-0x410500058008811,
-0x480a040008010820,
-0x2194082044002002,
-0x2008a20001004200,
-0x40908041041004,
-0x881002200540404,
-0x4001082002082101,
-0x8110408880880,
-0x8000404040080200,
-0x200020082180080,
-0x1184440400114100,
-0xc220008020110412,
-0x4088084040090100,
-0x8822104100121080,
-0x100111884008200a,
-0x2844040288820200,
-0x90901088003010,
-0x1000a218000400,
-0x1102010420204,
-0x8414a3483000200,
-0x6410849901420400,
-0x201080200901040,
-0x204880808050002,
-0x1001008201210000,
-0x16a6300a890040a,
-0x8049000441108600,
-0x2212002060410044,
-0x100086308020020,
-0x484241408020421,
-0x105084028429c085,
-0x4282480801080c,
-0x81c098488088240,
-0x1400000090480820,
-0x4444000030208810,
-0x1020142010820200,
-0x2234802004018200,
-0xc2040450820a00,
-0x2101021090020,
-rook:
- 0xa080041440042080,
- 0xa840200410004001,
- 0xc800c1000200081,
- 0x100081001000420,
- 0x200020010080420,
- 0x3001c0002010008,
- 0x8480008002000100,
- 0x2080088004402900,
- 0x800098204000,
- 0x2024401000200040,
- 0x100802000801000,
- 0x120800800801000,
- 0x208808088000400,
- 0x2802200800400,
- 0x2200800100020080,
- 0x801000060821100,
- 0x80044006422000,
- 0x100808020004000,
- 0x12108a0010204200,
- 0x140848010000802,
- 0x481828014002800,
- 0x8094004002004100,
- 0x4010040010010802,
- 0x20008806104,
- 0x100400080208000,
- 0x2040002120081000,
- 0x21200680100081,
- 0x20100080080080,
- 0x2000a00200410,
- 0x20080800400,
- 0x80088400100102,
- 0x80004600042881,
- 0x4040008040800020,
- 0x440003000200801,
- 0x4200011004500,
- 0x188020010100100,
- 0x14800401802800,
- 0x2080040080800200,
- 0x124080204001001,
- 0x200046502000484,
- 0x480400080088020,
- 0x1000422010034000,
- 0x30200100110040,
- 0x100021010009,
- 0x2002080100110004,
- 0x202008004008002,
- 0x20020004010100,
- 0x2048440040820001,
- 0x101002200408200,
- 0x40802000401080,
- 0x4008142004410100,
- 0x2060820c0120200,
- 0x1001004080100,
- 0x20c020080040080,
- 0x2935610830022400,
- 0x44440041009200,
- 0x280001040802101,
- 0x2100190040002085,
- 0x80c0084100102001,
- 0x4024081001000421,
- 0x20030a0244872,
- 0x12001008414402,
- 0x2006104900a0804,
- 0x1004081002402,
+test
++- run test 12/13 passed, 1 failed
+init board called herePlaced piece p at square 45 (rank 5, file 5)
+Placed piece B at square 36 (rank 4, file 4)
+Placed piece p at square 26 (rank 3, file 2)
+Updating occupancy:
+  Piece P bitboard: 0
+  Piece N bitboard: 0
+  Piece B bitboard: 1000000000
+  Piece R bitboard: 0
+  Piece Q bitboard: 0
+  Piece K bitboard: 0
+  Piece p bitboard: 200004000000
+  Piece n bitboard: 0
+  Piece b bitboard: 0
+  Piece r bitboard: 0
+  Piece q bitboard: 0
+  Piece k bitboard: 0
+Updated occupancy:
+  White: 1000000000
+  Black: 200004000000
+  Both: 201004000000
+init board called herePlaced piece R at square 42 (rank 5, file 2)
+Placed piece B at square 45 (rank 5, file 5)
+Placed piece R at square 27 (rank 3, file 3)
+Updating occupancy:
+  Piece P bitboard: 0
+  Piece N bitboard: 0
+  Piece B bitboard: 200000000000
+  Piece R bitboard: 40008000000
+  Piece Q bitboard: 0
+  Piece K bitboard: 0
+  Piece p bitboard: 0
+  Piece n bitboard: 0
+  Piece b bitboard: 0
+  Piece r bitboard: 0
+  Piece q bitboard: 0
+  Piece k bitboard: 0
+Updated occupancy:
+  White: 240008000000
+  Black: 0
+  Both: 240008000000
+error: 'main.test.bishop move generation - blocked by friendly pieces' failed: init board called herePlaced piece r at square 56 (rank 7, file 0)
+Placed piece n at square 57 (rank 7, file 1)
+Placed piece b at square 58 (rank 7, file 2)
+Placed piece q at square 59 (rank 7, file 3)
+Placed piece k at square 60 (rank 7, file 4)
+Placed piece b at square 61 (rank 7, file 5)
+Placed piece n at square 62 (rank 7, file 6)
+Placed piece r at square 63 (rank 7, file 7)
+Placed piece p at square 48 (rank 6, file 0)
+Placed piece p at square 49 (rank 6, file 1)
+Placed piece p at square 50 (rank 6, file 2)
+Placed piece p at square 51 (rank 6, file 3)
+Placed piece p at square 52 (rank 6, file 4)
+Placed piece p at square 53 (rank 6, file 5)
+Placed piece p at square 54 (rank 6, file 6)
+Placed piece p at square 55 (rank 6, file 7)
+Placed piece P at square 8 (rank 1, file 0)
+Placed piece P at square 9 (rank 1, file 1)
+Placed piece P at square 10 (rank 1, file 2)
+Placed piece P at square 11 (rank 1, file 3)
+Placed piece P at square 12 (rank 1, file 4)
+Placed piece P at square 13 (rank 1, file 5)
+Placed piece P at square 14 (rank 1, file 6)
+Placed piece P at square 15 (rank 1, file 7)
+Placed piece R at square 0 (rank 0, file 0)
+Placed piece N at square 1 (rank 0, file 1)
+Placed piece B at square 2 (rank 0, file 2)
+Placed piece Q at square 3 (rank 0, file 3)
+Placed piece K at square 4 (rank 0, file 4)
+Placed piece B at square 5 (rank 0, file 5)
+Placed piece N at square 6 (rank 0, file 6)
+Placed piece R at square 7 (rank 0, file 7)
+Updating occupancy:
+  Piece P bitboard: ff00
+  Piece N bitboard: 42
+  Piece B bitboard: 24
+  Piece R bitboard: 81
+  Piece Q bitboard: 8
+  Piece K bitboard: 10
+  Piece p bitboard: ff000000000000
+  Piece n bitboard: 4200000000000000
+  Piece b bitboard: 2400000000000000
+  Piece r bitboard: 8100000000000000
+  Piece q bitboard: 800000000000000
+  Piece k bitboard: 1000000000000000
+Updated occupancy:
+  White: ffff
+  Black: ffff000000000000
+  Both: ffff00000000ffff
+init board called herePlaced piece P at square 48 (rank 6, file 0)
+Placed piece p at square 8 (rank 1, file 0)
+Updating occupancy:
+  Piece P bitboard: 1000000000000
+  Piece N bitboard: 0
+  Piece B bitboard: 0
+  Piece R bitboard: 0
+  Piece Q bitboard: 0
+  Piece K bitboard: 0
+  Piece p bitboard: 100
+  Piece n bitboard: 0
+  Piece b bitboard: 0
+  Piece r bitboard: 0
+  Piece q bitboard: 0
+  Piece k bitboard: 0
+Updated occupancy:
+  White: 1000000000000
+  Black: 100
+  Both: 1000000000100
+init board called herePlaced piece p at square 32 (rank 4, file 0)
+Placed piece P at square 33 (rank 4, file 1)
+Updating occupancy:
+  Piece P bitboard: 200000000
+  Piece N bitboard: 0
+  Piece B bitboard: 0
+  Piece R bitboard: 0
+  Piece Q bitboard: 0
+  Piece K bitboard: 0
+  Piece p bitboard: 100000000
+  Piece n bitboard: 0
+  Piece b bitboard: 0
+  Piece r bitboard: 0
+  Piece q bitboard: 0
+  Piece k bitboard: 0
+Updated occupancy:
+  White: 200000000
+  Black: 100000000
+  Both: 300000000
+init board called herePlaced piece p at square 24 (rank 3, file 0)
+Placed piece p at square 25 (rank 3, file 1)
+Placed piece p at square 26 (rank 3, file 2)
+Placed piece p at square 27 (rank 3, file 3)
+Placed piece p at square 28 (rank 3, file 4)
+Placed piece p at square 29 (rank 3, file 5)
+Placed piece p at square 30 (rank 3, file 6)
+Placed piece p at square 31 (rank 3, file 7)
+Placed piece P at square 16 (rank 2, file 0)
+Placed piece P at square 17 (rank 2, file 1)
+Placed piece P at square 18 (rank 2, file 2)
+Placed piece P at square 19 (rank 2, file 3)
+Placed piece P at square 20 (rank 2, file 4)
+Placed piece P at square 21 (rank 2, file 5)
+Placed piece P at square 22 (rank 2, file 6)
+Placed piece P at square 23 (rank 2, file 7)
+Updating occupancy:
+  Piece P bitboard: ff0000
+  Piece N bitboard: 0
+  Piece B bitboard: 0
+  Piece R bitboard: 0
+  Piece Q bitboard: 0
+  Piece K bitboard: 0
+  Piece p bitboard: ff000000
+  Piece n bitboard: 0
+  Piece b bitboard: 0
+  Piece r bitboard: 0
+  Piece q bitboard: 0
+  Piece k bitboard: 0
+Updated occupancy:
+  White: ff0000
+  Black: ff000000
+  Both: ffff0000
+init board called herePlaced piece r at square 56 (rank 7, file 0)
+Placed piece n at square 57 (rank 7, file 1)
+Placed piece b at square 58 (rank 7, file 2)
+Placed piece q at square 59 (rank 7, file 3)
+Placed piece k at square 60 (rank 7, file 4)
+Placed piece b at square 61 (rank 7, file 5)
+Placed piece n at square 62 (rank 7, file 6)
+Placed piece r at square 63 (rank 7, file 7)
+Placed piece p at square 48 (rank 6, file 0)
+Placed piece p at square 49 (rank 6, file 1)
+Placed piece p at square 50 (rank 6, file 2)
+Placed piece p at square 51 (rank 6, file 3)
+Placed piece p at square 52 (rank 6, file 4)
+Placed piece p at square 53 (rank 6, file 5)
+Placed piece p at square 54 (rank 6, file 6)
+Placed piece p at square 55 (rank 6, file 7)
+Placed piece P at square 8 (rank 1, file 0)
+Placed piece P at square 9 (rank 1, file 1)
+Placed piece P at square 10 (rank 1, file 2)
+Placed piece P at square 11 (rank 1, file 3)
+Placed piece P at square 12 (rank 1, file 4)
+Placed piece P at square 13 (rank 1, file 5)
+Placed piece P at square 14 (rank 1, file 6)
+Placed piece P at square 15 (rank 1, file 7)
+Placed piece R at square 0 (rank 0, file 0)
+Placed piece N at square 1 (rank 0, file 1)
+Placed piece B at square 2 (rank 0, file 2)
+Placed piece Q at square 3 (rank 0, file 3)
+Placed piece K at square 4 (rank 0, file 4)
+Placed piece B at square 5 (rank 0, file 5)
+Placed piece N at square 6 (rank 0, file 6)
+Placed piece R at square 7 (rank 0, file 7)
+Updating occupancy:
+  Piece P bitboard: ff00
+  Piece N bitboard: 42
+  Piece B bitboard: 24
+  Piece R bitboard: 81
+  Piece Q bitboard: 8
+  Piece K bitboard: 10
+  Piece p bitboard: ff000000000000
+  Piece n bitboard: 4200000000000000
+  Piece b bitboard: 2400000000000000
+  Piece r bitboard: 8100000000000000
+  Piece q bitboard: 800000000000000
+  Piece k bitboard: 1000000000000000
+Updated occupancy:
+  White: ffff
+  Black: ffff000000000000
+  Both: ffff00000000ffff
+init board called herePlaced piece r at square 56 (rank 7, file 0)
+Placed piece n at square 57 (rank 7, file 1)
+Placed piece b at square 58 (rank 7, file 2)
+Placed piece q at square 59 (rank 7, file 3)
+Placed piece k at square 60 (rank 7, file 4)
+Placed piece b at square 61 (rank 7, file 5)
+Placed piece n at square 62 (rank 7, file 6)
+Placed piece r at square 63 (rank 7, file 7)
+Placed piece p at square 48 (rank 6, file 0)
+Placed piece p at square 49 (rank 6, file 1)
+Placed piece p at square 50 (rank 6, file 2)
+Placed piece p at square 51 (rank 6, file 3)
+Placed piece p at square 52 (rank 6, file 4)
+Placed piece p at square 53 (rank 6, file 5)
+Placed piece p at square 54 (rank 6, file 6)
+Placed piece p at square 55 (rank 6, file 7)
+Placed piece P at square 8 (rank 1, file 0)
+Placed piece P at square 9 (rank 1, file 1)
+Placed piece P at square 10 (rank 1, file 2)
+Placed piece P at square 11 (rank 1, file 3)
+Placed piece P at square 12 (rank 1, file 4)
+Placed piece P at square 13 (rank 1, file 5)
+Placed piece P at square 14 (rank 1, file 6)
+Placed piece P at square 15 (rank 1, file 7)
+Placed piece R at square 0 (rank 0, file 0)
+Placed piece N at square 1 (rank 0, file 1)
+Placed piece B at square 2 (rank 0, file 2)
+Placed piece Q at square 3 (rank 0, file 3)
+Placed piece K at square 4 (rank 0, file 4)
+Placed piece B at square 5 (rank 0, file 5)
+Placed piece N at square 6 (rank 0, file 6)
+Placed piece R at square 7 (rank 0, file 7)
+Updating occupancy:
+  Piece P bitboard: ff00
+  Piece N bitboard: 42
+  Piece B bitboard: 24
+  Piece R bitboard: 81
+  Piece Q bitboard: 8
+  Piece K bitboard: 10
+  Piece p bitboard: ff000000000000
+  Piece n bitboard: 4200000000000000
+  Piece b bitboard: 2400000000000000
+  Piece r bitboard: 8100000000000000
+  Piece q bitboard: 800000000000000
+  Piece k bitboard: 1000000000000000
+Updated occupancy:
+  White: ffff
+  Black: ffff000000000000
+  Both: ffff00000000ffff
+Placed piece K at square 27 (rank 3, file 3)
+Updating occupancy:
+  Piece P bitboard: 0
+  Piece N bitboard: 0
+  Piece B bitboard: 0
+  Piece R bitboard: 0
+  Piece Q bitboard: 0
+  Piece K bitboard: 8000000
+  Piece p bitboard: 0
+  Piece n bitboard: 0
+  Piece b bitboard: 0
+  Piece r bitboard: 0
+  Piece q bitboard: 0
+  Piece k bitboard: 0
+Updated occupancy:
+  White: 8000000
+  Black: 0
+  Both: 8000000
+Placed piece p at square 42 (rank 5, file 2)
+Placed piece p at square 43 (rank 5, file 3)
+Placed piece p at square 44 (rank 5, file 4)
+Placed piece p at square 34 (rank 4, file 2)
+Placed piece K at square 35 (rank 4, file 3)
+Placed piece p at square 36 (rank 4, file 4)
+Placed piece p at square 26 (rank 3, file 2)
+Placed piece p at square 27 (rank 3, file 3)
+Placed piece p at square 28 (rank 3, file 4)
+Updating occupancy:
+  Piece P bitboard: 0
+  Piece N bitboard: 0
+  Piece B bitboard: 0
+  Piece R bitboard: 0
+  Piece Q bitboard: 0
+  Piece K bitboard: 800000000
+  Piece p bitboard: 1c141c000000
+  Piece n bitboard: 0
+  Piece b bitboard: 0
+  Piece r bitboard: 0
+  Piece q bitboard: 0
+  Piece k bitboard: 0
+Updated occupancy:
+  White: 800000000
+  Black: 1c141c000000
+  Both: 1c1c1c000000
+init board called herePlaced piece R at square 27 (rank 3, file 3)
+Updating occupancy:
+  Piece P bitboard: 0
+  Piece N bitboard: 0
+  Piece B bitboard: 0
+  Piece R bitboard: 8000000
+  Piece Q bitboard: 0
+  Piece K bitboard: 0
+  Piece p bitboard: 0
+  Piece n bitboard: 0
+  Piece b bitboard: 0
+  Piece r bitboard: 0
+  Piece q bitboard: 0
+  Piece k bitboard: 0
+Updated occupancy:
+  White: 8000000
+  Black: 0
+  Both: 8000000
+init board called herePlaced piece P at square 35 (rank 4, file 3)
+Placed piece P at square 26 (rank 3, file 2)
+Placed piece R at square 27 (rank 3, file 3)
+Placed piece P at square 28 (rank 3, file 4)
+Placed piece P at square 19 (rank 2, file 3)
+Updating occupancy:
+  Piece P bitboard: 814080000
+  Piece N bitboard: 0
+  Piece B bitboard: 0
+  Piece R bitboard: 8000000
+  Piece Q bitboard: 0
+  Piece K bitboard: 0
+  Piece p bitboard: 0
+  Piece n bitboard: 0
+  Piece b bitboard: 0
+  Piece r bitboard: 0
+  Piece q bitboard: 0
+  Piece k bitboard: 0
+Updated occupancy:
+  White: 81c080000
+  Black: 0
+  Both: 81c080000
+init board called herePlaced piece p at square 43 (rank 5, file 3)
+Placed piece R at square 26 (rank 3, file 2)
+Placed piece p at square 28 (rank 3, file 4)
+Updating occupancy:
+  Piece P bitboard: 0
+  Piece N bitboard: 0
+  Piece B bitboard: 0
+  Piece R bitboard: 4000000
+  Piece Q bitboard: 0
+  Piece K bitboard: 0
+  Piece p bitboard: 80010000000
+  Piece n bitboard: 0
+  Piece b bitboard: 0
+  Piece r bitboard: 0
+  Piece q bitboard: 0
+  Piece k bitboard: 0
+Updated occupancy:
+  White: 4000000
+  Black: 80010000000
+  Both: 80014000000
+init board called herePlaced piece B at square 27 (rank 3, file 3)
+Updating occupancy:
+  Piece P bitboard: 0
+  Piece N bitboard: 0
+  Piece B bitboard: 8000000
+  Piece R bitboard: 0
+  Piece Q bitboard: 0
+  Piece K bitboard: 0
+  Piece p bitboard: 0
+  Piece n bitboard: 0
+  Piece b bitboard: 0
+  Piece r bitboard: 0
+  Piece q bitboard: 0
+  Piece k bitboard: 0
+Updated occupancy:
+  White: 8000000
+  Black: 0
+  Both: 8000000
+init board called herePlaced piece P at square 42 (rank 5, file 2)
+Placed piece B at square 35 (rank 4, file 3)
+Placed piece P at square 26 (rank 3, file 2)
+Updating occupancy:
+  Piece P bitboard: 40004000000
+  Piece N bitboard: 0
+  Piece B bitboard: 800000000
+  Piece R bitboard: 0
+  Piece Q bitboard: 0
+  Piece K bitboard: 0
+  Piece p bitboard: 0
+  Piece n bitboard: 0
+  Piece b bitboard: 0
+  Piece r bitboard: 0
+  Piece q bitboard: 0
+  Piece k bitboard: 0
+Updated occupancy:
+  White: 40804000000
+  Black: 0
+  Both: 40804000000
+expected 0, found 7
+/usr/lib/zig/lib/std/testing.zig:97:17: 0x104635c in expectEqualInner__anon_1960 (test)
+                return error.TestExpectedEqual;
+                ^
+/home/strydr/kirin-zig/src/main.zig:459:5: 0x10e4b47 in test.bishop move generation - blocked by friendly pieces (test)
+    try std.testing.expectEqual(@as(usize, 0), context.count);
+    ^
+error: while executing test 'main.test.sliding pieces - multiple pieces', the following test command failed:
+/home/strydr/kirin-zig/.zig-cache/o/d89197e7a012d4f935d548ffa21b1845/test --seed=0x441bb1b9 --cache-dir=/home/strydr/kirin-zig/.zig-cache --listen=- 
+Build Summary: 1/3 steps succeeded; 1 failed; 12/13 tests passed; 1 failed
+test transitive failure
++- run test 12/13 passed, 1 failed
+error: the following build command failed with exit code 1:
+/home/strydr/kirin-zig/.zig-cache/o/50b4f575ec8277b0119198be63214d6a/build /usr/lib/zig/zig /usr/lib/zig/lib /home/strydr/kirin-zig /home/strydr/kirin-zig/.zig-cache /home/strydr/.cache/zig --seed 0x441bb1b9 -Z37cdaf7741a945ed test

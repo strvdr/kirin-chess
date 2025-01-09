@@ -46,30 +46,40 @@ pub const Move = packed struct {
         const source_coords = self.from.toCoordinates() catch return;
         const target_coords = self.to.toCoordinates() catch return;
 
+        const piece_name = switch (self.piece) {
+            .P, .p => "pawn",
+            .R, .r => "rook",
+            .B, .b => "bishop",
+            .N, .n => "knight",
+            .Q, .q => "queen",
+            .K, .k => "king",
+        };
+
         switch (self.move_type) {
             .promotion, .promotion_capture => {
-                const promotion_char: u8 = @as(u8, switch (self.promotion_piece) {
-                    .queen => 'q',
-                    .rook => 'r',
-                    .bishop => 'b',
-                    .knight => 'n',
-                    .none => unreachable,
-                });
-                std.debug.print("pawn promotion: {c}{c}{c}{c}{c}\n", .{
-                    source_coords[0], source_coords[1],
-                    target_coords[0], target_coords[1],
+                const promotion_char = bitboard.Piece.toPromotionChar(@as(bitboard.Piece, @enumFromInt(@intFromEnum(self.promotion_piece))));
+                std.debug.print("{s} promotion: {c}{c}{c}{c}{c}\n", .{
+                    piece_name,
+                    source_coords[0],
+                    source_coords[1],
+                    target_coords[0],
+                    target_coords[1],
                     promotion_char,
                 });
             },
             .double_push => {
-                std.debug.print("double pawn push: {c}{c}{c}{c}\n", .{
-                    source_coords[0], source_coords[1],
-                    target_coords[0], target_coords[1],
+                std.debug.print("{s} double push: {c}{c}{c}{c}\n", .{
+                    piece_name,
+                    source_coords[0],
+                    source_coords[1],
+                    target_coords[0],
+                    target_coords[1],
                 });
             },
             else => {
-                std.debug.print("pawn {s}: {c}{c}{c}{c}\n", .{
-                    if (self.move_type == .capture) "capture" else "push",
+                std.debug.print("{s} {s}: {c}{c}{c}{c}\n", .{
+                    piece_name,
+                    if (self.move_type == .capture) "capture" else "move",
                     source_coords[0],
                     source_coords[1],
                     target_coords[0],
@@ -214,5 +224,213 @@ pub fn generatePawnMoves(
         }
 
         bb_copy &= bb_copy - 1; // Clear LSB
+    }
+}
+
+pub fn generateKnightMoves(
+    board: *const bitboard.Board,
+    attack_table: *const atk.AttackTable,
+    context: anytype,
+    comptime callback: fn (@TypeOf(context), Move) void,
+) void {
+    const side = board.sideToMove;
+    const opponent_pieces = board.occupancy[@intFromEnum(side.opposite())];
+
+    // Get knights bitboard for current side
+    const knights_bb = if (side == .white)
+        board.bitboard[@intFromEnum(bitboard.Piece.N)]
+    else
+        board.bitboard[@intFromEnum(bitboard.Piece.n)];
+
+    var bb_copy = knights_bb;
+    while (bb_copy != 0) {
+        const from = utils.getLSBindex(bb_copy);
+        if (from < 0) break;
+        const from_square = @as(u6, @intCast(from));
+
+        // Get all possible moves for this knight
+        const moves = attack_table.knight[from_square];
+
+        // Split into captures and quiet moves
+        const captures = moves & opponent_pieces;
+        const quiet_moves = moves & ~board.occupancy[2]; // All empty squares
+
+        // Process captures
+        var captures_bb = captures;
+        while (captures_bb != 0) {
+            const to = utils.getLSBindex(captures_bb);
+            if (to < 0) break;
+            const to_square = @as(u6, @intCast(to));
+
+            callback(context, .{
+                .from = @as(bitboard.Square, @enumFromInt(from_square)),
+                .to = @as(bitboard.Square, @enumFromInt(to_square)),
+                .piece = if (side == .white) .N else .n,
+                .move_type = .capture,
+            });
+
+            captures_bb &= captures_bb - 1;
+        }
+
+        // Process quiet moves
+        var quiet_bb = quiet_moves;
+        while (quiet_bb != 0) {
+            const to = utils.getLSBindex(quiet_bb);
+            if (to < 0) break;
+            const to_square = @as(u6, @intCast(to));
+
+            callback(context, .{
+                .from = @as(bitboard.Square, @enumFromInt(from_square)),
+                .to = @as(bitboard.Square, @enumFromInt(to_square)),
+                .piece = if (side == .white) .N else .n,
+                .move_type = .quiet,
+            });
+
+            quiet_bb &= quiet_bb - 1;
+        }
+
+        bb_copy &= bb_copy - 1;
+    }
+}
+
+pub fn generateKingMoves(
+    board: *const bitboard.Board,
+    attack_table: *const atk.AttackTable,
+    context: anytype,
+    comptime callback: fn (@TypeOf(context), Move) void,
+) void {
+    const side = board.sideToMove;
+    const opponent_pieces = board.occupancy[@intFromEnum(side.opposite())];
+
+    // Get king bitboard for current side
+    const king_bb = if (side == .white)
+        board.bitboard[@intFromEnum(bitboard.Piece.K)]
+    else
+        board.bitboard[@intFromEnum(bitboard.Piece.k)];
+
+    var bb_copy = king_bb;
+    while (bb_copy != 0) {
+        const from = utils.getLSBindex(bb_copy);
+        if (from < 0) break;
+        const from_square = @as(u6, @intCast(from));
+
+        // Get all possible moves for this king
+        const moves = attack_table.king[from_square];
+
+        // Split into captures and quiet moves
+        const captures = moves & opponent_pieces;
+        const quiet_moves = moves & ~board.occupancy[2];
+
+        // Process captures
+        var captures_bb = captures;
+        while (captures_bb != 0) {
+            const to = utils.getLSBindex(captures_bb);
+            if (to < 0) break;
+            const to_square = @as(u6, @intCast(to));
+
+            callback(context, .{
+                .from = @as(bitboard.Square, @enumFromInt(from_square)),
+                .to = @as(bitboard.Square, @enumFromInt(to_square)),
+                .piece = if (side == .white) .K else .k,
+                .move_type = .capture,
+            });
+
+            captures_bb &= captures_bb - 1;
+        }
+
+        // Process quiet moves
+        var quiet_bb = quiet_moves;
+        while (quiet_bb != 0) {
+            const to = utils.getLSBindex(quiet_bb);
+            if (to < 0) break;
+            const to_square = @as(u6, @intCast(to));
+
+            callback(context, .{
+                .from = @as(bitboard.Square, @enumFromInt(from_square)),
+                .to = @as(bitboard.Square, @enumFromInt(to_square)),
+                .piece = if (side == .white) .K else .k,
+                .move_type = .quiet,
+            });
+
+            quiet_bb &= quiet_bb - 1;
+        }
+
+        bb_copy &= bb_copy - 1;
+    }
+}
+
+pub fn generateSlidingMoves(
+    board: *const bitboard.Board,
+    attack_table: *const atk.AttackTable,
+    context: anytype,
+    comptime callback: fn (@TypeOf(context), Move) void,
+    is_bishop: bool,
+) void {
+    const side = board.sideToMove;
+    const friendly_pieces = board.occupancy[@intFromEnum(side)];
+    const opponent_pieces = board.occupancy[@intFromEnum(side.opposite())];
+
+    // Get piece bitboard based on side and type
+    const piece_bb = if (is_bishop)
+        (if (side == .white) board.bitboard[@intFromEnum(bitboard.Piece.B)] else board.bitboard[@intFromEnum(bitboard.Piece.b)])
+    else
+        (if (side == .white) board.bitboard[@intFromEnum(bitboard.Piece.R)] else board.bitboard[@intFromEnum(bitboard.Piece.r)]);
+
+    var bb_copy = piece_bb;
+    while (bb_copy != 0) {
+        const from = utils.getLSBindex(bb_copy);
+        if (from < 0) break;
+        const from_square = @as(u6, @intCast(from));
+
+        // Get all possible moves considering current occupancy
+        const moves = if (is_bishop)
+            atk.getBishopAttacks(from_square, board.occupancy[2], attack_table)
+        else
+            atk.getRookAttacks(from_square, board.occupancy[2], attack_table);
+
+        // Remove moves to squares with friendly pieces
+        const legal_moves = moves & ~friendly_pieces;
+
+        // First generate captures
+        var captures_bb = legal_moves & opponent_pieces;
+        while (captures_bb != 0) {
+            const to = utils.getLSBindex(captures_bb);
+            if (to < 0) break;
+            const to_square = @as(u6, @intCast(to));
+
+            callback(context, .{
+                .from = @as(bitboard.Square, @enumFromInt(from_square)),
+                .to = @as(bitboard.Square, @enumFromInt(to_square)),
+                .piece = if (is_bishop)
+                    (if (side == .white) .B else .b)
+                else
+                    (if (side == .white) .R else .r),
+                .move_type = .capture,
+            });
+
+            captures_bb &= captures_bb - 1;
+        }
+
+        // Then generate quiet moves (moves to empty squares)
+        var quiet_bb = legal_moves & ~opponent_pieces; // Changed from board.occupancy[2]
+        while (quiet_bb != 0) {
+            const to = utils.getLSBindex(quiet_bb);
+            if (to < 0) break;
+            const to_square = @as(u6, @intCast(to));
+
+            callback(context, .{
+                .from = @as(bitboard.Square, @enumFromInt(from_square)),
+                .to = @as(bitboard.Square, @enumFromInt(to_square)),
+                .piece = if (is_bishop)
+                    (if (side == .white) .B else .b)
+                else
+                    (if (side == .white) .R else .r),
+                .move_type = .quiet,
+            });
+
+            quiet_bb &= quiet_bb - 1;
+        }
+
+        bb_copy &= bb_copy - 1;
     }
 }
