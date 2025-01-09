@@ -12,226 +12,316 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with Kirin Chess.  If not, see <https://www.gnu.org/licenses/>.
-
 const std = @import("std");
+const board = @import("bitboard.zig");
 const utils = @import("utils.zig");
-const bb = @import("bitboard.zig");
 const assert = std.debug.assert;
 
-//Bit Manipulations
+/// Gets a bit value at the specified square position
+/// Returns 1 if bit is set, 0 otherwise
 pub fn getBit(bitboard: u64, square: u6) u1 {
-    if (bitboard & (@as(u64, 1) << square) == 0) return 0 else return 1;
+    assert(square < 64);
+    return @intCast((bitboard >> square) & 1);
 }
 
+/// Sets a bit at the specified square position
+/// Validates input square is within bounds
 pub fn setBit(bitboard: *u64, square: u6) void {
+    assert(square < 64);
     bitboard.* |= (@as(u64, 1) << square);
 }
 
+/// Clears a bit at the specified square position if it is set
+/// No-op if bit is already clear
 pub fn popBit(bitboard: *u64, square: u6) void {
-    if (getBit(bitboard.*, square) != 0) {
-        bitboard.* ^= (@as(u64, 1) << square);
-    }
+    assert(square < 64);
+    bitboard.* &= ~(@as(u64, 1) << square);
 }
 
+/// Counts the number of set bits in a bitboard using built-in popcount
 pub fn countBits(bitboard: u64) u6 {
-    var bitboardCopy = bitboard;
-    var bits_set: usize = 0;
-    while (bitboardCopy != 0) : (bits_set += 1) {
-        bitboardCopy &= bitboardCopy - 1;
-    }
-    return @as(u6, @truncate(bits_set));
+    return @intCast(@popCount(bitboard));
 }
 
+/// Gets the index of the least significant set bit
+/// Returns -1 if no bits are set
 pub fn getLSBindex(bitboard: u64) i8 {
-    const bitboardCopy = bitboard;
-    if (bitboardCopy != 0) {
-        return countBits((bitboardCopy & (~bitboardCopy + 1)) - 1);
-    } else {
-        return -1;
-    }
+    return if (bitboard == 0) -1 else @intCast(@ctz(bitboard));
 }
 
-pub fn setOccupancy(index: u64, bitsInMask: u6, attackMask: u64) u64 {
-    var occupancy: u64 = @as(u64, 0);
-    var attackMaskCopy = attackMask;
-    for (0..bitsInMask) |count| {
-        const lsbIndex = getLSBindex(attackMaskCopy);
-        if (lsbIndex == -1) {
-            continue;
-        }
-        const square: u6 = @intCast(lsbIndex);
-        popBit(&attackMaskCopy, square);
-        const bitShift: u6 = @intCast(count);
-        if ((index & (@as(u64, 1) << bitShift)) != 0) {
-            occupancy |= @as(u64, 1) << square;
+/// Creates an occupancy bitboard based on the index and attack mask
+pub fn setOccupancy(index: u64, bits_in_mask: u6, attack_mask: u64) u64 {
+    assert(bits_in_mask <= 64);
+
+    var occupancy: u64 = 0;
+    var attack_mask_copy = attack_mask;
+
+    // Iterate through each bit position
+    var count: u6 = 0;
+    while (attack_mask_copy != 0) : (count += 1) {
+        const square = @ctz(attack_mask_copy);
+
+        // Clear the current least significant bit
+        attack_mask_copy &= attack_mask_copy - 1;
+
+        // If the corresponding bit in index is set, set the bit in occupancy
+        if ((index & (@as(u64, 1) << @as(u6, @intCast(count)))) != 0) {
+            occupancy |= @as(u64, 1) << @as(u6, @intCast(square));
         }
     }
 
     return occupancy;
 }
 
-//Print Board Functions
+/// Prints a visual representation of a bitboard
 pub fn printBitboard(bitboard: u64) void {
+    // Print rank numbers and board
     for (0..8) |rank| {
+        const display_rank = 8 - rank;
+        std.debug.print("  {d}  ", .{display_rank});
+
         for (0..8) |file| {
             const square: u6 = @intCast(rank * 8 + file);
-            if (file == 0) std.debug.print("  {d}  ", .{8 - rank});
-            const isOccupied: u1 = getBit(bitboard, square);
-            std.debug.print(" {d} ", .{isOccupied});
+            const bit = getBit(bitboard, square);
+            std.debug.print(" {d} ", .{bit});
         }
         std.debug.print("\n", .{});
     }
 
-    std.debug.print("\n      a  b  c  d  e  f  g  h \n\n", .{});
+    // Print file letters
+    std.debug.print("\n     a  b  c  d  e  f  g  h\n\n", .{});
 
-    //print bitboard as unsigned decimal number
-    std.debug.print("      Bitboard: {d}\n\n", .{bitboard});
+    // Print decimal representation
+    std.debug.print("Bitboard: {d}\n\n", .{bitboard});
 }
 
-pub fn printBoard() void {
+/// Prints the current state of the chess board
+pub fn printBoard(b: *board.Board) void {
     std.debug.print("\n", .{});
+
+    // Print board squares
     for (0..8) |rank| {
+        const display_rank = 8 - rank;
+        std.debug.print("  {d} ", .{display_rank});
+
         for (0..8) |file| {
-            const square: u6 = @intCast(rank * 8 + file);
-            if (file == 0) std.debug.print("  {d} ", .{8 - rank});
-            var piece: i5 = -1;
-            for (0..12) |bitboardPiece| {
-                if (getBit(bb.bitboards[bitboardPiece], square) != 0) {
-                    piece = @intCast(bitboardPiece);
+            const square: u6 = @intCast((7 - rank) * 8 + file);
+            var piece_found = false;
+
+            // Find piece at current square
+            for (b.bitboard, 0..) |bitboard, piece_idx| {
+                if (getBit(bitboard, square) != 0) {
+                    const piece_char = getPieceChar(@as(board.Piece, @enumFromInt(piece_idx)));
+                    std.debug.print(" {c}", .{piece_char});
+                    piece_found = true;
                     break;
-                } else {
-                    piece = -1;
                 }
-                //std.debug.print("Piece: {d}\n", .{piece});
             }
-            if (piece == -1) {
+
+            if (!piece_found) {
                 std.debug.print(" .", .{});
-            } else {
-                std.debug.print(" {s}", .{bb.unicodePieces[@intCast(piece)]});
             }
         }
         std.debug.print("\n", .{});
     }
+
+    // Print file letters
     std.debug.print("\n     a b c d e f g h\n\n", .{});
-    const side = if (bb.sideToMove == 0) "white" else "black";
-    std.debug.print("Side: {s}\n", .{side});
-    if (bb.enpassant != @intFromEnum(bb.boardSquares.noSquare)) {
-        std.debug.print("Enpassant: {s}\n", .{bb.squareCoordinates[bb.enpassant]});
+
+    // Print game state
+    std.debug.print("Side: {s}\n", .{@tagName(b.sideToMove)});
+
+    // Print en passant square
+    if (b.enpassant != .noSquare) {
+        std.debug.print("En passant: {s}\n", .{@tagName(b.enpassant)});
     } else {
-        std.debug.print("Enpassant: no\n", .{});
+        std.debug.print("En passant: no\n", .{});
     }
 
-    std.debug.print("Castling: ", .{});
-    if ((bb.castle & @intFromEnum(bb.castlingRights.wk)) != 0) {
-        std.debug.print("K", .{});
-    } else {
-        std.debug.print("-", .{});
-    }
-
-    if ((bb.castle & @intFromEnum(bb.castlingRights.wq)) != 0) {
-        std.debug.print("Q", .{});
-    } else {
-        std.debug.print("-", .{});
-    }
-    if ((bb.castle & @intFromEnum(bb.castlingRights.bk)) != 0) {
-        std.debug.print("k", .{});
-    } else {
-        std.debug.print("-", .{});
-    }
-    if ((bb.castle & @intFromEnum(bb.castlingRights.wq)) != 0) {
-        std.debug.print("q", .{});
-    } else {
-        std.debug.print("-", .{});
-    }
-    std.debug.print("\n", .{});
+    // Print castling rights
+    std.debug.print("Castling: {s}\n", .{castlingToString(b.castling)});
 }
 
-pub fn parseFEN(fen: []const u8) void {
+/// Parses a FEN string and updates the board state
+pub fn parseFEN(b: *board.Board, fen: []const u8) !void {
     // Reset board state
-    @memset(bb.bitboards[0..], 0);
-    @memset(bb.occupancies[0..], 0);
-    bb.sideToMove = 0;
-    bb.enpassant = @intFromEnum(bb.boardSquares.noSquare);
-    bb.castle = 0;
+    for (&b.bitboard) |*bitboard| {
+        bitboard.* = 0;
+    }
+    b.occupancy = .{ 0, 0, 0 };
+    b.sideToMove = .white;
+    b.enpassant = .noSquare;
+    b.castling = .{};
 
-    var fenIndex: usize = 0;
-    var fileIndex: usize = 0;
+    var fen_index: usize = 0;
 
     // Parse piece positions
-    for (0..8) |rank| {
-        fileIndex = 0;
-        while (fileIndex < 8) {
-            const square: u6 = @intCast(rank * 8 + fileIndex);
+    try parsePiecePositions(b, fen, &fen_index);
+    fen_index += 1; // Skip space
 
-            // Handle pieces
-            if ((fen[fenIndex] >= 'a' and fen[fenIndex] <= 'z') or
-                (fen[fenIndex] >= 'A' and fen[fenIndex] <= 'Z'))
-            {
-                const piece: u8 = bb.charPieces[fen[fenIndex]];
-                utils.setBit(&bb.bitboards[piece], square);
-                fenIndex += 1;
-                fileIndex += 1;
-            }
-
-            // Handle empty squares
-            else if (fen[fenIndex] >= '0' and fen[fenIndex] <= '9') {
-                const offset = fen[fenIndex] - '0';
-                fileIndex += offset; // -1 because the loop will increment file
-                fenIndex += 1;
-            }
-
-            // Handle rank separator
-            else if (fen[fenIndex] == '/') {
-                fenIndex += 1;
-            }
-        }
-    }
-
-    // Skip to side to move
-    fenIndex += 1;
+    b.updateOccupancy();
 
     // Parse side to move
-    bb.sideToMove = if (fen[fenIndex] == 'w') @intFromEnum(bb.side.white) else @intFromEnum(bb.side.black);
-
-    // Skip to castling rights
-    fenIndex += 2;
+    try parseSideToMove(b, fen[fen_index]);
+    fen_index += 2; // Skip side to move and space
 
     // Parse castling rights
-    while (fen[fenIndex] != ' ') : (fenIndex += 1) {
-        switch (fen[fenIndex]) {
-            'K' => bb.castle |= @intFromEnum(bb.castlingRights.wk),
-            'Q' => bb.castle |= @intFromEnum(bb.castlingRights.wq),
-            'k' => bb.castle |= @intFromEnum(bb.castlingRights.bk),
-            'q' => bb.castle |= @intFromEnum(bb.castlingRights.bq),
-            '-' => {},
-            else => {},
-        }
-    }
+    try parseCastlingRights(b, fen, &fen_index);
+    fen_index += 1; // Skip space
 
-    // Skip to en passant square
-    fenIndex += 1;
+    while (fen[fen_index] == ' ') {
+        fen_index += 1;
+    }
 
     // Parse en passant square
-    if (fen[fenIndex] != '-') {
-        const file_val: i32 = fen[fenIndex] - 'a';
-        const rank_val: i32 = 8 - (@as(i32, fen[fenIndex + 1] -% '0'));
+    const remaining_fen = fen[fen_index..];
+    if (remaining_fen.len == 0 or remaining_fen[0] == ' ') {
+        return error.InvalidFEN;
+    }
+    try parseEnPassant(b, remaining_fen);
+}
 
-        if (file_val >= 0 and file_val < 8 and
-            rank_val >= 0 and rank_val < 8)
-        {
-            const file: i8 = @intCast(file_val);
-            const rank: i8 = @intCast(rank_val);
-            bb.enpassant = @intCast(rank * 8 + file);
+fn parsePiecePositions(b: *board.Board, fen: []const u8, fen_index: *usize) !void {
+    var rank: isize = 7; // Start at rank 8 (top of the bitboard)
+    var file: usize = 0;
+
+    while (fen_index.* < fen.len) {
+        const c = fen[fen_index.*];
+
+        if (c == ' ') {
+            break;
+        }
+
+        if (c == '/') {
+            file = 0;
+            rank -= 1;
+            fen_index.* += 1;
+            continue;
+        }
+
+        if (c >= '1' and c <= '8') {
+            file += c - '0';
+            fen_index.* += 1;
+        } else {
+            // Convert rank to usize before multiplication
+            const urank = @as(usize, @intCast(rank));
+            const square = @as(u6, @intCast(urank * 8 + file));
+
+            const piece = charToPiece(c) orelse return error.InvalidPiece;
+            utils.setBit(&b.bitboard[@intFromEnum(piece)], square);
+
+            std.debug.print("Placed piece {s} at square {d} (rank {d}, file {d})\n", .{
+                @tagName(piece),
+                square,
+                rank,
+                file,
+            });
+
+            file += 1;
+            fen_index.* += 1;
         }
     }
+}
 
-    for (@intFromEnum(bb.pieceEncoding.P)..@intFromEnum(bb.pieceEncoding.K) + 1) |piece| {
-        bb.occupancies[@intFromEnum(bb.side.white)] |= bb.bitboards[piece];
+fn castlingToString(rights: board.CastlingRights) []const u8 {
+    var result: []const u8 = "";
+    if (rights.whiteKingside) result = "K";
+    if (rights.whiteQueenside) result = std.fmt.allocPrint(std.heap.page_allocator, "{s}Q", .{result}) catch return "error";
+    if (rights.blackKingside) result = std.fmt.allocPrint(std.heap.page_allocator, "{s}k", .{result}) catch return "error";
+    if (rights.blackQueenside) result = std.fmt.allocPrint(std.heap.page_allocator, "{s}q", .{result}) catch return "error";
+    if (result.len == 0) return "-";
+    return result;
+}
+
+fn parseSideToMove(b: *board.Board, c: u8) !void {
+    b.sideToMove = switch (c) {
+        'w' => .white,
+        'b' => .black,
+        else => return error.InvalidFEN,
+    };
+}
+
+fn parseCastlingRights(b: *board.Board, fen: []const u8, fen_index: *usize) !void {
+    while (fen[fen_index.*] != ' ') : (fen_index.* += 1) {
+        switch (fen[fen_index.*]) {
+            'K' => b.castling.whiteKingside = true,
+            'Q' => b.castling.whiteQueenside = true,
+            'k' => b.castling.blackKingside = true,
+            'q' => b.castling.blackQueenside = true,
+            '-' => break,
+            else => return error.InvalidFEN,
+        }
+    }
+}
+
+fn parseEnPassant(b: *board.Board, fen_part: []const u8) !void {
+    if (fen_part.len < 1) {
+        return error.InvalidFEN;
     }
 
-    for (@intFromEnum(bb.pieceEncoding.p)..@intFromEnum(bb.pieceEncoding.k) + 1) |piece| {
-        bb.occupancies[@intFromEnum(bb.side.black)] |= bb.bitboards[piece];
+    if (fen_part[0] == '-') {
+        b.enpassant = .noSquare;
+        return;
     }
 
-    bb.occupancies[@intFromEnum(bb.side.both)] = bb.occupancies[@intFromEnum(bb.side.white)] | bb.occupancies[@intFromEnum(bb.side.black)];
+    if (fen_part.len < 2) {
+        return error.InvalidFEN;
+    }
+
+    if (fen_part[0] < 'a' or fen_part[0] > 'h') {
+        return error.InvalidFEN;
+    }
+
+    if (fen_part[1] < '1' or fen_part[1] > '8') {
+        return error.InvalidFEN;
+    }
+
+    const file = fen_part[0] - 'a';
+    const rank = 8 - (fen_part[1] - '0');
+
+    if (file < 0 or file >= 8 or rank < 0 or rank >= 8) {
+        return error.InvalidFEN;
+    }
+
+    const square_name = std.fmt.allocPrint(std.heap.page_allocator, "{c}{c}", .{ fen_part[0], fen_part[1] }) catch return error.OutOfMemory;
+    defer std.heap.page_allocator.free(square_name);
+
+    b.enpassant = std.meta.stringToEnum(board.Square, square_name) orelse {
+        return error.InvalidSquare;
+    };
+}
+
+fn charToPiece(c: u8) ?board.Piece {
+    return switch (c) {
+        'P' => .P,
+        'N' => .N,
+        'B' => .B,
+        'R' => .R,
+        'Q' => .Q,
+        'K' => .K,
+        'p' => .p,
+        'n' => .n,
+        'b' => .b,
+        'r' => .r,
+        'q' => .q,
+        'k' => .k,
+        else => null,
+    };
+}
+
+fn getPieceChar(piece: board.Piece) u8 {
+    return switch (piece) {
+        .P => 'P',
+        .N => 'N',
+        .B => 'B',
+        .R => 'R',
+        .Q => 'Q',
+        .K => 'K',
+        .p => 'p',
+        .n => 'n',
+        .b => 'b',
+        .r => 'r',
+        .q => 'q',
+        .k => 'k',
+    };
 }
