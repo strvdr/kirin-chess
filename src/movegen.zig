@@ -415,96 +415,138 @@ pub fn generateMoves() void {
 //    0100 0000 0000 0000 0000 0000    enpassant flag      0x400000
 //    1000 0000 0000 0000 0000 0000    castling flag       0x800000
 
-//only needs to return 24 bits, throw out the extra 8 bits (MSB)
-pub fn encodeMove(source: u32, target: u32, piece: u32, promoted: u32, capture: u32, double: u32, enpassant: u32, castling: u32) u32 {
-    return source | (target << 6) | (piece << 12) | (promoted << 16) | (capture << 20) | (double << 21) | (enpassant << 22) | (castling << 23);
-}
+//converted from Maksim Korzh's implementation of move storage to my own using packed structs thanks to a comment from @komarispaghet@mastodon.social
+pub const Move = packed struct {
+    source: u6,
+    target: u6,
+    piece: u4,
+    promoted: u4,
+    capture: u1,
+    double: u1,
+    enpassant: u1,
+    castling: u1,
 
-pub fn decodeMoveSource(move: u32) u32 {
-    return move & 0x3f;
-}
+    pub fn encode(source: u24, target: u24, piece: u24, promoted: u24, capture: u24, double: u24, enpassant: u24, castling: u24) Move {
+        const move = Move{
+            .source = @intCast(source),
+            .target = @intCast(target),
+            .piece = @intCast(piece),
+            .promoted = @intCast(promoted),
+            .capture = @intCast(capture),
+            .double = @intCast(double),
+            .enpassant = @intCast(enpassant),
+            .castling = @intCast(castling),
+        };
+        return @bitCast(move);
+    }
 
-pub fn decodeMoveTarget(move: u32) u32 {
-    return (move & 0xfc0) >> 6;
-}
-
-pub fn decodeMovePiece(move: u32) u32 {
-    return (move & 0xf000) >> 12;
-}
-
-pub fn decodeMovePromoted(move: u32) u32 {
-    return (move & 0xf0000) >> 16;
-}
-
-pub fn decodeMoveCapture(move: u32) u32 {
-    return (move & 0x100000) >> 20;
-}
-
-pub fn decodeMoveDouble(move: u32) u32 {
-    return (move & 0x200000) >> 21;
-}
-
-pub fn decodeMoveEnpassant(move: u32) u32 {
-    return (move & 0x400000) >> 22;
-}
-
-pub fn decodeMoveCastling(move: u32) u32 {
-    return (move & 0x800000) >> 23;
-}
-
-pub const charPromotedPieces = init: {
-    var promotedPieces: [128]u8 = undefined;
-    @memset(&promotedPieces, 0);
-
-    promotedPieces['N'] = @intFromEnum(bitboard.pieceEncoding.N);
-    promotedPieces['B'] = @intFromEnum(bitboard.pieceEncoding.B);
-    promotedPieces['R'] = @intFromEnum(bitboard.pieceEncoding.R);
-    promotedPieces['Q'] = @intFromEnum(bitboard.pieceEncoding.Q);
-    promotedPieces['n'] = @intFromEnum(bitboard.pieceEncoding.n);
-    promotedPieces['b'] = @intFromEnum(bitboard.pieceEncoding.b);
-    promotedPieces['r'] = @intFromEnum(bitboard.pieceEncoding.r);
-    promotedPieces['q'] = @intFromEnum(bitboard.pieceEncoding.q);
-
-    break :init promotedPieces;
+    pub fn decode(move: u24) Move {
+        return @bitCast(move);
+    }
 };
 
-const moveStruct = struct { moveList: [256]u32, count: u32 };
+const maxMoves = 256;
 
-pub var moves = moveStruct{ .moveList = undefined, .count = 0 };
+pub const MoveList = struct {
+    moves: [maxMoves]Move,
+    count: usize,
 
-pub fn printMove(move: u32) void {
-    const sourceSquare: u32 = decodeMoveSource(move);
-    const targetSquare: u32 = decodeMoveTarget(move);
-    const piece: u32 = decodeMovePiece(move);
-    const promoted: u32 = decodeMovePromoted(move);
-    const capture: u32 = decodeMoveCapture(move);
+    pub fn init() MoveList {
+        return MoveList{
+            .moves = undefined,
+            .count = 0,
+        };
+    }
 
-    std.debug.print("source square: {s}\n", .{bitboard.squareCoordinates[sourceSquare]});
-    std.debug.print("target square: {s}\n", .{bitboard.squareCoordinates[targetSquare]});
-    std.debug.print("piece: {s}\n", .{bitboard.unicodePieces[piece]});
-    std.debug.print("promoted: {s}\n", .{if (promoted == 1) "yes" else "no"});
-    std.debug.print("capture: {s}\n", .{if (capture == 1) "yes" else "no"});
+    pub fn addMove(self: *MoveList, move: Move) !void {
+        if (self.count >= maxMoves) {
+            return error.MoveListFull;
+        }
+        self.moves[self.count] = move;
+        self.count += 1;
+    }
+
+    pub fn clear(self: *MoveList) void {
+        self.count = 0;
+    }
+
+    pub fn getCurrentMoves(self: *MoveList) MoveList {
+        return self.*;
+    }
+};
+
+pub var moveList = MoveList.init();
+
+pub fn decodeMoveSource(move: u24) u24 {
+    const decoded: Move = @bitCast(move);
+    return decoded.source;
 }
 
-pub fn addMove(move: u32) void {
-    moves.moveList[moves.count] = move;
-    moves.count += 1;
+pub fn decodeMoveTarget(move: u24) u24 {
+    const decoded: Move = @bitCast(move);
+    return decoded.target;
+}
+
+pub fn decodeMovePiece(move: u24) u24 {
+    const decoded: Move = @bitCast(move);
+    return decoded.piece;
+}
+
+pub fn decodeMovePromoted(move: u24) u24 {
+    const decoded: Move = @bitCast(move);
+    return decoded.promoted;
+}
+
+pub fn decodeMoveCapture(move: u24) u24 {
+    const decoded: Move = @bitCast(move);
+    return decoded.capture;
+}
+
+pub fn decodeMoveDouble(move: u24) u24 {
+    const decoded: Move = @bitCast(move);
+    return decoded.double;
+}
+
+pub fn decodeMoveEnpassant(move: u24) u24 {
+    const decoded: Move = @bitCast(move);
+    return decoded.enpassant;
+}
+
+pub fn decodeMoveCastling(move: u24) u24 {
+    const decoded: Move = @bitCast(move);
+    return decoded.castling;
+}
+
+pub fn printMove(move: Move) void {
+    const sourceSquare = move.source;
+    const targetSquare = move.target;
+    const piece = move.piece;
+    const promoted = move.promoted;
+    const capture = move.capture;
+
+    std.debug.print("source square: {s}\n", .{sourceSquare});
+    std.debug.print("target square: {s}\n", .{targetSquare});
+    std.debug.print("piece: {s}\n", .{piece});
+    std.debug.print("promoted: {s}\n", .{promoted});
+    std.debug.print("capture: {s}\n", .{capture});
 }
 
 pub fn printMoveList() void {
-    std.debug.print("move, piece, capture, double, enpassant, castling", .{});
-    for (0..moves.count) |moveCount| {
-        const currentMove = moves.moveList[moveCount];
-        std.debug.print("\n{s}{s}{c}       {s}       {d}       {d}          {d}        {d}", .{
-            bitboard.squareCoordinates[decodeMoveSource(currentMove)],
-            bitboard.squareCoordinates[decodeMoveTarget(currentMove)],
-            charPromotedPieces[decodeMovePromoted(currentMove)],
-            bitboard.unicodePieces[decodeMovePiece(currentMove)],
-            decodeMoveCapture(currentMove),
-            decodeMoveDouble(currentMove),
-            decodeMoveEnpassant(currentMove),
-            decodeMoveCastling(currentMove),
+    std.debug.print("Move    Piece    Cap    Dbl    EnP    Castle\n", .{});
+    std.debug.print("---------------------------------------------", .{});
+    for (0..moveList.count) |moveCount| {
+        const currentMove = moveList.moves[moveCount];
+        const promotedPiece = @as(bitboard.pieceEncoding, @enumFromInt(currentMove.promoted));
+        std.debug.print("\n{s}{s}{c}   {s}        {d}      {d}      {d}      {d}", .{
+            bitboard.squareCoordinates[currentMove.source],
+            bitboard.squareCoordinates[currentMove.target],
+            promotedPiece.toPromotionChar(),
+            bitboard.unicodePieces[currentMove.piece],
+            currentMove.capture,
+            currentMove.double,
+            currentMove.enpassant,
+            currentMove.castling,
         });
-        std.debug.print("\nTotal number of moves: {d}", .{moves.count});
+        std.debug.print("\nTotal number of moves: {d}", .{moveList.count});
     }
 }

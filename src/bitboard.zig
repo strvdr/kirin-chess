@@ -23,6 +23,15 @@ pub const killerMovePos = "rnbqkb1r/pp1p1pPp/8/2p1pP2/1P1P4/3P3P/P1P1P3/RNBQKBNR
 
 pub const boardSquares = enum(u7) { a8, b8, c8, d8, e8, f8, g8, h8, a7, b7, c7, d7, e7, f7, g7, h7, a6, b6, c6, d6, e6, f6, g6, h6, a5, b5, c5, d5, e5, f5, g5, h5, a4, b4, c4, d4, e4, f4, g4, h4, a3, b3, c3, d3, e3, f3, g3, h3, a2, b2, c2, d2, e2, f2, g2, h2, a1, b1, c1, d1, e1, f1, g1, h1, noSquare };
 
+pub fn squareToCoordinates(square: u6) ![2]u8 {
+    if (square >= 64) return error.InvalidSquare;
+
+    const file = @as(u8, 'a') + @as(u8, @intCast(square % 8));
+    const rank = @as(u8, '1') + @as(u8, @intCast(square / 8));
+
+    return [2]u8{ file, rank };
+}
+
 pub const squareCoordinates: [64][]const u8 = .{ "a8", "b8", "c8", "d8", "e8", "f8", "g8", "h8", "a7", "b7", "c7", "d7", "e7", "f7", "g7", "h7", "a6", "b6", "c6", "d6", "e6", "f6", "g6", "h6", "a5", "b5", "c5", "d5", "e5", "f5", "g5", "h5", "a4", "b4", "c4", "d4", "e4", "f4", "g4", "h4", "a3", "b3", "c3", "d3", "e3", "f3", "g3", "h3", "a2", "b2", "c2", "d2", "e2", "f2", "g2", "h2", "a1", "b1", "c1", "d1", "e1", "f1", "g1", "h1" };
 
 // bishop relevant occupancy bit count for every square on board
@@ -43,7 +52,30 @@ pub const rookRelevantBits: [64]u5 = .{ 12, 11, 11, 11, 11, 11, 11, 12, 11, 10, 
 
 pub const castlingRights = enum(u4) { wk = 1, wq = 2, bk = 4, bq = 8 };
 
-pub const pieceEncoding = enum(u4) { P, N, B, R, Q, K, p, n, b, r, q, k };
+pub const pieceEncoding = enum(u4) {
+    P,
+    N,
+    B,
+    R,
+    Q,
+    K,
+    p,
+    n,
+    b,
+    r,
+    q,
+    k,
+
+    pub fn toPromotionChar(self: pieceEncoding) u8 {
+        return switch (self) {
+            .Q, .q => 'q',
+            .R, .r => 'r',
+            .B, .b => 'b',
+            .N, .n => 'n',
+            else => ' ',
+        };
+    }
+};
 
 pub const charPieces = init: {
     var pieces: [128]u8 = undefined;

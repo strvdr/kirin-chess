@@ -27,11 +27,10 @@ pub fn main() !void {
     attacks.initAll();
     utils.parseFEN("r3k2r/p1ppqpb1/bn2pnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R b KQkq - 0 1 ");
     utils.printBoard();
-    movegen.addMove(movegen.encodeMove(@intFromEnum(bitboard.boardSquares.a7), @intFromEnum(bitboard.boardSquares.a5), @intFromEnum(bitboard.pieceEncoding.p), 1, 1, 0, 0, 0));
-    movegen.addMove(movegen.encodeMove(@intFromEnum(bitboard.boardSquares.a3), @intFromEnum(bitboard.boardSquares.a5), @intFromEnum(bitboard.pieceEncoding.P), 1, 1, 0, 0, 0));
+    try movegen.moveList.addMove(movegen.Move.encode(@intFromEnum(bitboard.boardSquares.d7), @intFromEnum(bitboard.boardSquares.e8), @intFromEnum(bitboard.pieceEncoding.b), 2, 1, 1, 1, 1));
 
-    movegen.printMove(movegen.moves.moveList[0]);
-    movegen.printMove(movegen.moves.moveList[1]);
+    //movegen.printMove(movegen.moves.moveList[0]);
+    //movegen.printMove(movegen.moves.moveList[1]);
     movegen.printMoveList();
     //movegen.generateMoves();
     try bw.flush(); // Don't forget to flush!
