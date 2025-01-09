@@ -420,34 +420,91 @@ pub fn encodeMove(source: u32, target: u32, piece: u32, promoted: u32, capture: 
     return source | (target << 6) | (piece << 12) | (promoted << 16) | (capture << 20) | (double << 21) | (enpassant << 22) | (castling << 23);
 }
 
-fn decodeMoveSource(move: u32) u32 {
+pub fn decodeMoveSource(move: u32) u32 {
     return move & 0x3f;
 }
 
-fn decodeMoveTarget(move: u32) u32 {
+pub fn decodeMoveTarget(move: u32) u32 {
     return (move & 0xfc0) >> 6;
 }
 
-fn decodeMovePiece(move: u32) u32 {
+pub fn decodeMovePiece(move: u32) u32 {
     return (move & 0xf000) >> 12;
 }
 
-fn decodeMovePromoted(move: u32) u32 {
+pub fn decodeMovePromoted(move: u32) u32 {
     return (move & 0xf0000) >> 16;
 }
 
-fn decodeMoveCapture(move: u32) u32 {
+pub fn decodeMoveCapture(move: u32) u32 {
     return (move & 0x100000) >> 20;
 }
 
-fn decodeMoveDouble(move: u32) u32 {
+pub fn decodeMoveDouble(move: u32) u32 {
     return (move & 0x200000) >> 21;
 }
 
-fn decodeMoveEnpassant(move: u32) u32 {
+pub fn decodeMoveEnpassant(move: u32) u32 {
     return (move & 0x400000) >> 22;
 }
 
-fn decodeMoveCastling(move: u32) u32 {
+pub fn decodeMoveCastling(move: u32) u32 {
     return (move & 0x800000) >> 23;
+}
+
+pub const charPromotedPieces = init: {
+    var promotedPieces: [128]u8 = undefined;
+    @memset(&promotedPieces, 0);
+
+    promotedPieces['N'] = @intFromEnum(bitboard.pieceEncoding.N);
+    promotedPieces['B'] = @intFromEnum(bitboard.pieceEncoding.B);
+    promotedPieces['R'] = @intFromEnum(bitboard.pieceEncoding.R);
+    promotedPieces['Q'] = @intFromEnum(bitboard.pieceEncoding.Q);
+    promotedPieces['n'] = @intFromEnum(bitboard.pieceEncoding.n);
+    promotedPieces['b'] = @intFromEnum(bitboard.pieceEncoding.b);
+    promotedPieces['r'] = @intFromEnum(bitboard.pieceEncoding.r);
+    promotedPieces['q'] = @intFromEnum(bitboard.pieceEncoding.q);
+
+    break :init promotedPieces;
+};
+
+const moveStruct = struct { moveList: [256]u32, count: u32 };
+
+pub var moves = moveStruct{ .moveList = undefined, .count = 0 };
+
+pub fn printMove(move: u32) void {
+    const sourceSquare: u32 = decodeMoveSource(move);
+    const targetSquare: u32 = decodeMoveTarget(move);
+    const piece: u32 = decodeMovePiece(move);
+    const promoted: u32 = decodeMovePromoted(move);
+    const capture: u32 = decodeMoveCapture(move);
+
+    std.debug.print("source square: {s}\n", .{bitboard.squareCoordinates[sourceSquare]});
+    std.debug.print("target square: {s}\n", .{bitboard.squareCoordinates[targetSquare]});
+    std.debug.print("piece: {s}\n", .{bitboard.unicodePieces[piece]});
+    std.debug.print("promoted: {s}\n", .{if (promoted == 1) "yes" else "no"});
+    std.debug.print("capture: {s}\n", .{if (capture == 1) "yes" else "no"});
+}
+
+pub fn addMove(move: u32) void {
+    moves.moveList[moves.count] = move;
+    moves.count += 1;
+}
+
+pub fn printMoveList() void {
+    std.debug.print("move, piece, capture, double, enpassant, castling", .{});
+    for (0..moves.count) |moveCount| {
+        const currentMove = moves.moveList[moveCount];
+        std.debug.print("\n{s}{s}{c}       {s}       {d}       {d}          {d}        {d}", .{
+            bitboard.squareCoordinates[decodeMoveSource(currentMove)],
+            bitboard.squareCoordinates[decodeMoveTarget(currentMove)],
+            charPromotedPieces[decodeMovePromoted(currentMove)],
+            bitboard.unicodePieces[decodeMovePiece(currentMove)],
+            decodeMoveCapture(currentMove),
+            decodeMoveDouble(currentMove),
+            decodeMoveEnpassant(currentMove),
+            decodeMoveCastling(currentMove),
+        });
+        std.debug.print("\nTotal number of moves: {d}", .{moves.count});
+    }
 }

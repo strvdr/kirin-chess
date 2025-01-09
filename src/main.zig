@@ -27,19 +27,12 @@ pub fn main() !void {
     attacks.initAll();
     utils.parseFEN("r3k2r/p1ppqpb1/bn2pnp1/3PN3/Pp2P3/2N2Q1p/1PPBBPPP/R3K2R b KQkq - 0 1 ");
     utils.printBoard();
-    const move: u32 = movegen.encodeMove(@intFromEnum(bitboard.boardSquares.a7), @intFromEnum(bitboard.boardSquares.a5), @intFromEnum(bitboard.pieceEncoding.p), 1, 1, 0, 0, 0);
+    movegen.addMove(movegen.encodeMove(@intFromEnum(bitboard.boardSquares.a7), @intFromEnum(bitboard.boardSquares.a5), @intFromEnum(bitboard.pieceEncoding.p), 1, 1, 0, 0, 0));
+    movegen.addMove(movegen.encodeMove(@intFromEnum(bitboard.boardSquares.a3), @intFromEnum(bitboard.boardSquares.a5), @intFromEnum(bitboard.pieceEncoding.P), 1, 1, 0, 0, 0));
 
-    const sourceSquare: u32 = movegen.decodeMoveSource(move);
-    const targetSquare: u32 = movegen.decodeMoveTarget(move);
-    const piece: u32 = movegen.decodeMovePiece(move);
-    const promoted: u32 = movegen.decodeMovePromoted(move);
-    const capture: u32 = movegen.decodeMoveCapture(move);
-
-    std.debug.print("source square: {s}\n", .{bitboard.squareCoordinates[sourceSquare]});
-    std.debug.print("target square: {s}\n", .{bitboard.squareCoordinates[targetSquare]});
-    std.debug.print("piece: {s}\n", .{bitboard.unicodePieces[piece]});
-    std.debug.print("promoted: {s}\n", .{if (promoted == 1) "yes" else "no"});
-    std.debug.print("capture: {s}\n", .{if (capture == 1) "yes" else "no"});
+    movegen.printMove(movegen.moves.moveList[0]);
+    movegen.printMove(movegen.moves.moveList[1]);
+    movegen.printMoveList();
     //movegen.generateMoves();
     try bw.flush(); // Don't forget to flush!
 }
