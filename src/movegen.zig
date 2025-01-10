@@ -25,6 +25,7 @@ pub const MoveType = enum(u3) {
     promotionCapture,
     doublePush,
     enpassant,
+    castle,
 };
 
 pub const PromotionPiece = enum(u3) {
@@ -43,8 +44,8 @@ pub const Move = packed struct {
     moveType: MoveType,
 
     pub fn print(self: Move) void {
-        const sourceCoords = self.from.toCoordinates() catch return;
-        const targetCoords = self.to.toCoordinates() catch return;
+        const fromCoords = self.from.toCoordinates() catch return;
+        const toCoords = self.to.toCoordinates() catch return;
 
         const piece_name = switch (self.piece) {
             .P, .p => "pawn",
@@ -60,33 +61,95 @@ pub const Move = packed struct {
                 const promotionChar = bitboard.Piece.toPromotionChar(@as(bitboard.Piece, @enumFromInt(@intFromEnum(self.promotionPiece))));
                 std.debug.print("{s} promotion: {c}{c}{c}{c}{c}\n", .{
                     piece_name,
-                    sourceCoords[0],
-                    sourceCoords[1],
-                    targetCoords[0],
-                    targetCoords[1],
+                    fromCoords[0],
+                    fromCoords[1],
+                    toCoords[0],
+                    toCoords[1],
                     promotionChar,
                 });
             },
             .doublePush => {
                 std.debug.print("{s} double push: {c}{c}{c}{c}\n", .{
                     piece_name,
-                    sourceCoords[0],
-                    sourceCoords[1],
-                    targetCoords[0],
-                    targetCoords[1],
+                    fromCoords[0],
+                    fromCoords[1],
+                    toCoords[0],
+                    toCoords[1],
                 });
             },
             else => {
                 std.debug.print("{s} {s}: {c}{c}{c}{c}\n", .{
                     piece_name,
                     if (self.moveType == .capture) "capture" else "move",
-                    sourceCoords[0],
-                    sourceCoords[1],
-                    targetCoords[0],
-                    targetCoords[1],
+                    fromCoords[0],
+                    fromCoords[1],
+                    toCoords[0],
+                    toCoords[1],
                 });
             },
         }
+    }
+};
+
+pub const MoveList = struct {
+    moves: [256]Move = undefined,
+    count: usize = 0,
+
+    pub fn init() MoveList {
+        return .{};
+    }
+
+    /// Adds a move to the list. Returns error.OutOfMemory if list is full
+    pub fn addMove(self: *MoveList, move: Move) !void {
+        if (self.count >= self.moves.len) {
+            return error.OutOfMemory;
+        }
+        self.moves[self.count] = move;
+        self.count += 1;
+    }
+
+    /// Removes and returns the last move added. Returns null if list is empty
+    pub fn popMove(self: *MoveList) ?Move {
+        if (self.count == 0) return null;
+        self.count -= 1;
+        return self.moves[self.count];
+    }
+
+    /// Clears all moves from the list
+    pub fn clear(self: *MoveList) void {
+        self.count = 0;
+    }
+
+    /// Returns a slice of all moves in the list
+    pub fn getMoves(self: *const MoveList) []const Move {
+        return self.moves[0..self.count];
+    }
+
+    /// Returns true if the list contains no moves
+    pub fn isEmpty(self: *const MoveList) bool {
+        return self.count == 0;
+    }
+
+    /// Returns true if the list is full
+    pub fn isFull(self: *const MoveList) bool {
+        return self.count >= self.moves.len;
+    }
+
+    /// Print all moves in the list for debugging
+    pub fn print(self: *const MoveList) void {
+        std.debug.print("\nMove list ({d} moves):\n", .{self.count});
+        for (self.moves[0..self.count], 0..) |move, i| {
+            std.debug.print("{d}: ", .{i + 1});
+            move.print();
+        }
+        std.debug.print("\n", .{});
+    }
+
+    /// Implements the callback interface used by move generators
+    pub fn addMoveCallback(ctx: *MoveList, move: Move) void {
+        ctx.addMove(move) catch |err| {
+            std.debug.print("Failed to add move: {}\n", .{err});
+        };
     }
 };
 
@@ -104,39 +167,33 @@ pub fn generatePawnMoves(
     else
         board.bitboard[@intFromEnum(bitboard.Piece.p)];
     const opponentPieces = board.occupancy[@intFromEnum(side.opposite())];
+    std.debug.print("White pawn bitboard: {b}\n", .{pawnBB});
     var bbCopy = pawnBB;
 
     // Direction of pawn movement and ranks
-    const pushOffset: i8 = switch (side) {
-        .white => 8,
-        .black => -8,
-        .both => unreachable,
-    };
-
-    const promotionRank: i8 = switch (side) {
-        .white => 7,
-        .black => 0,
-        .both => unreachable,
-    };
-
-    const startingRank: i8 = switch (side) {
-        .white => 6,
-        .black => 1,
-        .both => unreachable,
-    };
+    const pushOffset: i8 = if (side == .white) 8 else -8;
+    const startingRank: i8 = if (side == .white) 1 else 6;
+    const promotionRank: i8 = if (side == .white) 7 else 0;
 
     while (bbCopy != 0) {
         const from = utils.getLSBindex(bbCopy);
         if (from < 0) break;
         const fromSquare = @as(u6, @intCast(from));
+        const fromRank = @divFloor(@as(i8, from), 8);
+
+        const attackMask = attackTable.pawn[@intFromEnum(side)][@intCast(from)];
+        std.debug.print("Pawn at square {d} has attack mask: {b}\n", .{ from, attackMask });
+
+        const actualAttacks = attackMask & opponentPieces;
+        std.debug.print("After masking with opponent pieces: {b}\n", .{actualAttacks});
 
         // Single push
-        const to = @as(u6, @intCast(from)) + pushOffset;
+        const to = @as(i8, from) + pushOffset;
         if (to >= 0 and to < 64) {
             const toSquare = @as(u6, @intCast(to));
             if (utils.getBit(board.occupancy[2], toSquare) == 0) {
-                const rank = @divFloor(@as(i8, to), 8);
-                if (rank == promotionRank) {
+                const toRank = @divFloor(to, 8);
+                if (toRank == promotionRank) {
                     // Promotion moves
                     inline for ([_]PromotionPiece{ .queen, .rook, .bishop, .knight }) |promotionPiece| {
                         callback(context, .{
@@ -156,9 +213,8 @@ pub fn generatePawnMoves(
                         .moveType = .quiet,
                     });
 
-                    // Double push
-                    const currentRank = @divFloor(@as(i8, from), 8);
-                    if (currentRank == startingRank) {
+                    // Check for double push from starting rank
+                    if (fromRank == startingRank) {
                         const doubleTo = to + pushOffset;
                         if (doubleTo >= 0 and doubleTo < 64) {
                             const doubleToSquare = @as(u6, @intCast(doubleTo));
@@ -355,6 +411,99 @@ pub fn generateKingMoves(
             quietBB &= quietBB - 1;
         }
 
+        // Generate castling moves
+        if (side == .white) {
+            const e1 = @intFromEnum(bitboard.Square.e1);
+            if (fromSquare == e1) { // King is on original square
+                // Check kingside castling
+                if (board.castling.whiteKingside) {
+                    const f1 = @intFromEnum(bitboard.Square.f1);
+                    const g1 = @intFromEnum(bitboard.Square.g1);
+                    const h1 = @intFromEnum(bitboard.Square.h1);
+
+                    // Check if path is clear
+                    if (utils.getBit(board.occupancy[2], f1) == 0 and
+                        utils.getBit(board.occupancy[2], g1) == 0 and
+                        utils.getBit(board.bitboard[@intFromEnum(bitboard.Piece.R)], h1) == 1)
+                    {
+                        callback(context, .{
+                            .from = .e1,
+                            .to = .g1,
+                            .piece = .K,
+                            .moveType = .castle,
+                        });
+                    }
+                }
+
+                // Check queenside castling
+                if (board.castling.whiteQueenside) {
+                    const d1 = @intFromEnum(bitboard.Square.d1);
+                    const c1 = @intFromEnum(bitboard.Square.c1);
+                    const b1 = @intFromEnum(bitboard.Square.b1);
+                    const a1 = @intFromEnum(bitboard.Square.a1);
+
+                    // Check if path is clear
+                    if (utils.getBit(board.occupancy[2], d1) == 0 and
+                        utils.getBit(board.occupancy[2], c1) == 0 and
+                        utils.getBit(board.occupancy[2], b1) == 0 and
+                        utils.getBit(board.bitboard[@intFromEnum(bitboard.Piece.R)], a1) == 1)
+                    {
+                        callback(context, .{
+                            .from = .e1,
+                            .to = .c1,
+                            .piece = .K,
+                            .moveType = .castle,
+                        });
+                    }
+                }
+            }
+        } else { // Black
+            const e8 = @intFromEnum(bitboard.Square.e8);
+            if (fromSquare == e8) { // King is on original square
+                // Check kingside castling
+                if (board.castling.blackKingside) {
+                    const f8 = @intFromEnum(bitboard.Square.f8);
+                    const g8 = @intFromEnum(bitboard.Square.g8);
+                    const h8 = @intFromEnum(bitboard.Square.h8);
+
+                    // Check if path is clear
+                    if (utils.getBit(board.occupancy[2], f8) == 0 and
+                        utils.getBit(board.occupancy[2], g8) == 0 and
+                        utils.getBit(board.bitboard[@intFromEnum(bitboard.Piece.r)], h8) == 1)
+                    {
+                        callback(context, .{
+                            .from = .e8,
+                            .to = .g8,
+                            .piece = .k,
+                            .moveType = .castle,
+                        });
+                    }
+                }
+
+                // Check queenside castling
+                if (board.castling.blackQueenside) {
+                    const d8 = @intFromEnum(bitboard.Square.d8);
+                    const c8 = @intFromEnum(bitboard.Square.c8);
+                    const b8 = @intFromEnum(bitboard.Square.b8);
+                    const a8 = @intFromEnum(bitboard.Square.a8);
+
+                    // Check if path is clear
+                    if (utils.getBit(board.occupancy[2], d8) == 0 and
+                        utils.getBit(board.occupancy[2], c8) == 0 and
+                        utils.getBit(board.occupancy[2], b8) == 0 and
+                        utils.getBit(board.bitboard[@intFromEnum(bitboard.Piece.r)], a8) == 1)
+                    {
+                        callback(context, .{
+                            .from = .e8,
+                            .to = .c8,
+                            .piece = .k,
+                            .moveType = .castle,
+                        });
+                    }
+                }
+            }
+        }
+
         bbCopy &= bbCopy - 1;
     }
 }
@@ -425,6 +574,74 @@ pub fn generateSlidingMoves(
                     (if (side == .white) .B else .b)
                 else
                     (if (side == .white) .R else .r),
+                .moveType = .quiet,
+            });
+
+            quietBB &= quietBB - 1;
+        }
+
+        bbCopy &= bbCopy - 1;
+    }
+}
+
+pub fn generateQueenMoves(
+    board: *const bitboard.Board,
+    attackTable: *const atk.AttackTable,
+    context: anytype,
+    comptime callback: fn (@TypeOf(context), Move) void,
+) void {
+    const side = board.sideToMove;
+    const friendlyPieces = board.occupancy[@intFromEnum(side)];
+    const opponentPieces = board.occupancy[@intFromEnum(side.opposite())];
+
+    // Get queen bitboard based on side
+    const queenBB = if (side == .white)
+        board.bitboard[@intFromEnum(bitboard.Piece.Q)]
+    else
+        board.bitboard[@intFromEnum(bitboard.Piece.q)];
+
+    var bbCopy = queenBB;
+    while (bbCopy != 0) {
+        const from = utils.getLSBindex(bbCopy);
+        if (from < 0) break;
+        const fromSquare = @as(u6, @intCast(from));
+
+        // Get all possible moves by combining rook and bishop attacks
+        const rookMoves = atk.getRookAttacks(fromSquare, board.occupancy[2], attackTable);
+        const bishopMoves = atk.getBishopAttacks(fromSquare, board.occupancy[2], attackTable);
+        const moves = rookMoves | bishopMoves;
+
+        // Remove moves to squares with friendly pieces
+        const legalMoves = moves & ~friendlyPieces;
+
+        // Generate captures
+        var capturesBB = legalMoves & opponentPieces;
+        while (capturesBB != 0) {
+            const to = utils.getLSBindex(capturesBB);
+            if (to < 0) break;
+            const toSquare = @as(u6, @intCast(to));
+
+            callback(context, .{
+                .from = @as(bitboard.Square, @enumFromInt(fromSquare)),
+                .to = @as(bitboard.Square, @enumFromInt(toSquare)),
+                .piece = if (side == .white) .Q else .q,
+                .moveType = .capture,
+            });
+
+            capturesBB &= capturesBB - 1;
+        }
+
+        // Generate quiet moves
+        var quietBB = legalMoves & ~opponentPieces;
+        while (quietBB != 0) {
+            const to = utils.getLSBindex(quietBB);
+            if (to < 0) break;
+            const toSquare = @as(u6, @intCast(to));
+
+            callback(context, .{
+                .from = @as(bitboard.Square, @enumFromInt(fromSquare)),
+                .to = @as(bitboard.Square, @enumFromInt(toSquare)),
+                .piece = if (side == .white) .Q else .q,
                 .moveType = .quiet,
             });
 

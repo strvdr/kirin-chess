@@ -210,13 +210,6 @@ fn parsePiecePositions(b: *board.Board, fen: []const u8, fenIndex: *usize) !void
             const piece = charToPiece(c) orelse return error.InvalidPiece;
             utils.setBit(&b.bitboard[@intFromEnum(piece)], square);
 
-            std.debug.print("Placed piece {s} at square {d} (rank {d}, file {d})\n", .{
-                @tagName(piece),
-                square,
-                rank,
-                file,
-            });
-
             file += 1;
             fenIndex.* += 1;
         }
@@ -242,13 +235,19 @@ fn parseSideToMove(b: *board.Board, c: u8) !void {
 }
 
 fn parseCastlingRights(b: *board.Board, fen: []const u8, fenIndex: *usize) !void {
+    b.castling = .{};
+    if (fen[fenIndex.*] == '-') {
+        fenIndex.* += 1;
+        return;
+    }
+
     while (fen[fenIndex.*] != ' ') : (fenIndex.* += 1) {
         switch (fen[fenIndex.*]) {
             'K' => b.castling.whiteKingside = true,
             'Q' => b.castling.whiteQueenside = true,
             'k' => b.castling.blackKingside = true,
             'q' => b.castling.blackQueenside = true,
-            '-' => break,
+            '-' => continue,
             else => return error.InvalidFEN,
         }
     }

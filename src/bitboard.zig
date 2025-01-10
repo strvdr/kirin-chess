@@ -15,6 +15,8 @@
 
 const std = @import("std");
 const utils = @import("utils.zig");
+const movegen = @import("movegen.zig");
+const attacks = @import("attacks.zig");
 
 pub const Position = struct {
     pub const empty = "8/8/8/8/8/8/8/8 w - - ";
@@ -24,80 +26,81 @@ pub const Position = struct {
 };
 
 pub const Square = enum(u7) {
-    a8,
-    b8,
-    c8,
-    d8,
-    e8,
-    f8,
-    g8,
-    h8,
-    a7,
-    b7,
-    c7,
-    d7,
-    e7,
-    f7,
-    g7,
-    h7,
-    a6,
-    b6,
-    c6,
-    d6,
-    e6,
-    f6,
-    g6,
-    h6,
-    a5,
-    b5,
-    c5,
-    d5,
-    e5,
-    f5,
-    g5,
-    h5,
-    a4,
-    b4,
-    c4,
-    d4,
-    e4,
-    f4,
-    g4,
-    h4,
-    a3,
-    b3,
-    c3,
-    d3,
-    e3,
-    f3,
-    g3,
-    h3,
-    a2,
-    b2,
-    c2,
-    d2,
-    e2,
-    f2,
-    g2,
-    h2,
-    a1,
-    b1,
-    c1,
-    d1,
-    e1,
-    f1,
-    g1,
-    h1,
-    noSquare,
+    a1 = 0,
+    b1 = 1,
+    c1 = 2,
+    d1 = 3,
+    e1 = 4,
+    f1 = 5,
+    g1 = 6,
+    h1 = 7,
+    a2 = 8,
+    b2 = 9,
+    c2 = 10,
+    d2 = 11,
+    e2 = 12,
+    f2 = 13,
+    g2 = 14,
+    h2 = 15,
+    a3 = 16,
+    b3 = 17,
+    c3 = 18,
+    d3 = 19,
+    e3 = 20,
+    f3 = 21,
+    g3 = 22,
+    h3 = 23,
+    a4 = 24,
+    b4 = 25,
+    c4 = 26,
+    d4 = 27,
+    e4 = 28,
+    f4 = 29,
+    g4 = 30,
+    h4 = 31,
+    a5 = 32,
+    b5 = 33,
+    c5 = 34,
+    d5 = 35,
+    e5 = 36,
+    f5 = 37,
+    g5 = 38,
+    h5 = 39,
+    a6 = 40,
+    b6 = 41,
+    c6 = 42,
+    d6 = 43,
+    e6 = 44,
+    f6 = 45,
+    g6 = 46,
+    h6 = 47,
+    a7 = 48,
+    b7 = 49,
+    c7 = 50,
+    d7 = 51,
+    e7 = 52,
+    f7 = 53,
+    g7 = 54,
+    h7 = 55,
+    a8 = 56,
+    b8 = 57,
+    c8 = 58,
+    d8 = 59,
+    e8 = 60,
+    f8 = 61,
+    g8 = 62,
+    h8 = 63,
+    noSquare = 64,
 
     pub fn toCoordinates(self: Square) ![2]u8 {
         const square = @intFromEnum(self);
         if (square >= 64) return error.InvalidSquare;
 
-        return .{
-            @as(u8, 'a') + @as(u8, @intCast(square % 8)),
-            @as(u8, '1') + @as(u8, @intCast(square / 8)),
-        };
+        // Files are a-h left to right (0-7)
+        const file = @as(u8, 'a') + @as(u8, @intCast(square % 8));
+        // Ranks are 1-8 bottom to top (square/8 + 1)
+        const rank = @as(u8, '1') + @as(u8, @intCast(square / 8));
+        return .{ file, rank };
     }
 };
 
@@ -127,6 +130,18 @@ pub const Piece = enum(u4) {
 
     pub fn isWhite(self: Piece) bool {
         return @intFromEnum(self) <= @intFromEnum(Piece.K);
+    }
+
+    pub fn lowercase(self: Piece) Piece {
+        return switch (self) {
+            .P => .p,
+            .N => .n,
+            .B => .b,
+            .R => .r,
+            .Q => .q,
+            .K => .k,
+            else => self, // Already lowercase
+        };
     }
 };
 
@@ -259,12 +274,10 @@ pub const Board = struct {
     castling: CastlingRights = .{},
 
     pub fn init() Board {
-        std.debug.print("init board called here", .{});
         return .{};
     }
 
     pub fn initStartPosition(self: *Board) void {
-        std.debug.print("init start pos called here", .{});
         self.setPiece(.P, .{ .a2, .b2, .c2, .d2, .e2, .f2, .g2, .h2 });
         self.setPiece(.N, .{ .b1, .g1 });
         self.setPiece(.B, .{ .c1, .f1 });
@@ -286,6 +299,153 @@ pub const Board = struct {
         self.updateOccupancy();
     }
 
+    fn isKingInCheck(self: *const Board, side: Side, attackTable: *const attacks.AttackTable) bool {
+        // Find king's position
+        const kingBB = if (side == .white)
+            self.bitboard[@intFromEnum(Piece.K)]
+        else
+            self.bitboard[@intFromEnum(Piece.k)];
+
+        if (kingBB == 0) return false; // No king found (shouldn't happen in valid game)
+
+        const kingSquare = @as(u6, @intCast(utils.getLSBindex(kingBB)));
+        return attacks.isSquareAttacked(kingSquare, side.opposite(), self, attackTable);
+    }
+
+    pub fn makeMove(self: *Board, move: movegen.Move, attackTable: *const attacks.AttackTable) !void {
+        // Make a copy of the current board state
+        var tmpBoard = self.*;
+
+        // Make the move on the temporary board
+        Board.makeMoveUnchecked(&tmpBoard, move);
+
+        // Verify that our king is not in check after the move
+        if (tmpBoard.isKingInCheck(self.sideToMove, attackTable)) {
+            return error.InvalidMove;
+        }
+
+        // If move is valid, apply it to the actual board
+        self.* = tmpBoard;
+    }
+
+    pub fn makeMoveUnchecked(self: *Board, move: movegen.Move) void {
+        // Clear the en passant square from the previous move
+        self.enpassant = .noSquare;
+
+        // Get source and destination squares
+        const from = @intFromEnum(move.from);
+        const to = @intFromEnum(move.to);
+
+        // Remove piece from source square
+        utils.popBit(&self.bitboard[@intFromEnum(move.piece)], @intCast(from));
+
+        // Handle different move types
+        switch (move.moveType) {
+            .quiet => {
+                // Simple piece movement
+                utils.setBit(&self.bitboard[@intFromEnum(move.piece)], @intCast(to));
+            },
+            .capture => {
+                // Remove captured piece
+                for (&self.bitboard, 0..) |*pieceBB, i| {
+                    const piece = @as(Piece, @enumFromInt(i));
+                    if (piece.isWhite() != move.piece.isWhite() and utils.getBit(pieceBB.*, @intCast(to)) != 0) {
+                        utils.popBit(pieceBB, @intCast(to));
+                        break;
+                    }
+                }
+                // Place capturing piece
+                utils.setBit(&self.bitboard[@intFromEnum(move.piece)], @intCast(to));
+            },
+            .doublePush => {
+                // Handle pawn double push and set en passant square
+                utils.setBit(&self.bitboard[@intFromEnum(move.piece)], @intCast(to));
+
+                // Set en passant square (between source and destination)
+                const epSquare = if (move.piece.isWhite()) from + 8 else from - 8;
+                self.enpassant = @enumFromInt(epSquare);
+            },
+            .enpassant => {
+                // Place capturing pawn
+                utils.setBit(&self.bitboard[@intFromEnum(move.piece)], @intCast(to));
+
+                // Remove captured pawn - for en passant, the captured pawn is on the same file as 'to'
+                // but on the previous rank for white captures, or next rank for black captures
+                const capturedPiece = if (move.piece.isWhite()) Piece.p else Piece.P;
+                utils.popBit(&self.bitboard[@intFromEnum(capturedPiece)], @intCast(to));
+            },
+            .promotion, .promotionCapture => {
+                // Handle captures in promotion
+                if (move.moveType == .promotionCapture) {
+                    for (&self.bitboard, 0..) |*pieceBB, i| {
+                        const piece = @as(Piece, @enumFromInt(i));
+                        if (piece.isWhite() != move.piece.isWhite() and utils.getBit(pieceBB.*, @intCast(to)) != 0) {
+                            utils.popBit(pieceBB, @intCast(to));
+                            break;
+                        }
+                    }
+                }
+
+                // Convert promotion piece type to actual piece
+                const promotedPiece = switch (move.promotionPiece) {
+                    .queen => if (move.piece.isWhite()) Piece.Q else Piece.q,
+                    .rook => if (move.piece.isWhite()) Piece.R else Piece.r,
+                    .bishop => if (move.piece.isWhite()) Piece.B else Piece.b,
+                    .knight => if (move.piece.isWhite()) Piece.N else Piece.n,
+                    .none => unreachable,
+                };
+
+                // Place promoted piece
+                utils.setBit(&self.bitboard[@intFromEnum(promotedPiece)], @intCast(to));
+            },
+            .castle => {
+                // Place king on destination square
+                utils.setBit(&self.bitboard[@intFromEnum(move.piece)], @intCast(to));
+
+                // Move the rook based on which type of castling
+                const rookPiece = if (move.piece.isWhite()) Piece.R else Piece.r;
+                if (to > from) { // Kingside castle
+                    const rookFrom = if (move.piece.isWhite()) @intFromEnum(Square.h1) else @intFromEnum(Square.h8);
+                    const rookTo = if (move.piece.isWhite()) @intFromEnum(Square.f1) else @intFromEnum(Square.f8);
+                    utils.popBit(&self.bitboard[@intFromEnum(rookPiece)], @intCast(rookFrom));
+                    utils.setBit(&self.bitboard[@intFromEnum(rookPiece)], @intCast(rookTo));
+                } else { // Queenside castle
+                    const rookFrom = if (move.piece.isWhite()) @intFromEnum(Square.a1) else @intFromEnum(Square.a8);
+                    const rookTo = if (move.piece.isWhite()) @intFromEnum(Square.d1) else @intFromEnum(Square.d8);
+                    utils.popBit(&self.bitboard[@intFromEnum(rookPiece)], @intCast(rookFrom));
+                    utils.setBit(&self.bitboard[@intFromEnum(rookPiece)], @intCast(rookTo));
+                }
+            },
+        }
+
+        // Update castling rights if king or rook moves
+        switch (move.piece) {
+            .K => {
+                self.castling.whiteKingside = false;
+                self.castling.whiteQueenside = false;
+            },
+            .k => {
+                self.castling.blackKingside = false;
+                self.castling.blackQueenside = false;
+            },
+            .R => {
+                if (from == @intFromEnum(Square.a1)) self.castling.whiteQueenside = false;
+                if (from == @intFromEnum(Square.h1)) self.castling.whiteKingside = false;
+            },
+            .r => {
+                if (from == @intFromEnum(Square.a8)) self.castling.blackQueenside = false;
+                if (from == @intFromEnum(Square.h8)) self.castling.blackKingside = false;
+            },
+            else => {},
+        }
+
+        // Switch side to move
+        self.sideToMove = self.sideToMove.opposite();
+
+        // Update occupancy bitboards
+        self.updateOccupancy();
+    }
+
     fn setPiece(self: *Board, piece: Piece, squares: Square) void {
         for (squares) |square| {
             utils.setBit(&self.bitboard[@intFromEnum(piece)], @intFromEnum(square));
@@ -295,27 +455,19 @@ pub const Board = struct {
     pub fn updateOccupancy(self: *Board) void {
         self.occupancy = .{ 0, 0, 0 };
 
-        std.debug.print("Updating occupancy:\n", .{});
         for (0..12) |i| {
             const piece = @as(Piece, @enumFromInt(i));
-            const piece_bb = self.bitboard[i];
-            std.debug.print("  Piece {s} bitboard: {x}\n", .{ @tagName(piece), piece_bb });
+            const pieceBB = self.bitboard[i];
 
             if (piece.isWhite()) {
-                self.occupancy[@intFromEnum(Side.white)] |= piece_bb;
+                self.occupancy[@intFromEnum(Side.white)] |= pieceBB;
             } else {
-                self.occupancy[@intFromEnum(Side.black)] |= piece_bb;
+                self.occupancy[@intFromEnum(Side.black)] |= pieceBB;
             }
         }
 
         self.occupancy[@intFromEnum(Side.both)] = self.occupancy[@intFromEnum(Side.white)] |
             self.occupancy[@intFromEnum(Side.black)];
-
-        std.debug.print("Updated occupancy:\n  White: {x}\n  Black: {x}\n  Both: {x}\n", .{
-            self.occupancy[@intFromEnum(Side.white)],
-            self.occupancy[@intFromEnum(Side.black)],
-            self.occupancy[@intFromEnum(Side.both)],
-        });
     }
 };
 

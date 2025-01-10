@@ -362,26 +362,26 @@ pub fn getRookAttacks(square: u6, occupancy: u64, table: *const AttackTable) u64
     return table.rook[square][occ];
 }
 
-pub fn isSquareAttacked(square: u6, side: board.Side, game_board: *const board.Board, table: *const AttackTable) bool {
-    const piece_side = if (side == .white) board.Piece else board.Piece.lowercase();
+pub fn isSquareAttacked(square: u6, side: board.Side, gameBoard: *const board.Board, table: *const AttackTable) bool {
+    const pieceSide = if (side == .white) board.Piece.P else board.Piece.p;
 
     // Pawn attacks
-    if ((table.pawn[@intFromEnum(!side)][square] & game_board.piece_bb[piece_side.P]) != 0) return true;
+    if ((table.pawn[@intFromEnum(side.opposite())][square] & gameBoard.bitboard[@intFromEnum(pieceSide)]) != 0) return true;
 
     // Knight attacks
-    if ((table.knight[square] & game_board.piece_bb[piece_side.N]) != 0) return true;
+    if ((table.knight[square] & gameBoard.bitboard[@intFromEnum(pieceSide) + 1]) != 0) return true;
 
     // Bishop attacks
-    if ((getBishopAttacks(square, game_board.occupancy[2], table) & game_board.piece_bb[piece_side.B]) != 0) return true;
+    if ((getBishopAttacks(square, gameBoard.occupancy[2], table) & gameBoard.bitboard[@intFromEnum(pieceSide) + 2]) != 0) return true;
 
     // Rook attacks
-    if ((getRookAttacks(square, game_board.occupancy[2], table) & game_board.piece_bb[piece_side.R]) != 0) return true;
+    if ((getRookAttacks(square, gameBoard.occupancy[2], table) & gameBoard.bitboard[@intFromEnum(pieceSide) + 3]) != 0) return true;
 
     // Queen attacks
-    if (((getRookAttacks(square, game_board.occupancy[2], table) | (getBishopAttacks(square, game_board.occupancy[2], table))) & game_board.piece_bb[piece_side.Q]) != 0) return true;
+    if (((getRookAttacks(square, gameBoard.occupancy[2], table) | getBishopAttacks(square, gameBoard.occupancy[2], table)) & gameBoard.bitboard[@intFromEnum(pieceSide) + 4]) != 0) return true;
 
     // King attacks
-    if ((table.king[square] & game_board.piece_bb[piece_side.K]) != 0) return true;
+    if ((table.king[square] & gameBoard.bitboard[@intFromEnum(pieceSide) + 5]) != 0) return true;
 
     return false;
 }

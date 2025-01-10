@@ -1,416 +1,103 @@
-test
-+- run test 12/13 passed, 1 failed
-init board called herePlaced piece p at square 45 (rank 5, file 5)
-Placed piece B at square 36 (rank 4, file 4)
-Placed piece p at square 26 (rank 3, file 2)
-Updating occupancy:
-  Piece P bitboard: 0
-  Piece N bitboard: 0
-  Piece B bitboard: 1000000000
-  Piece R bitboard: 0
-  Piece Q bitboard: 0
-  Piece K bitboard: 0
-  Piece p bitboard: 200004000000
-  Piece n bitboard: 0
-  Piece b bitboard: 0
-  Piece r bitboard: 0
-  Piece q bitboard: 0
-  Piece k bitboard: 0
-Updated occupancy:
-  White: 1000000000
-  Black: 200004000000
-  Both: 201004000000
-init board called herePlaced piece R at square 42 (rank 5, file 2)
-Placed piece B at square 45 (rank 5, file 5)
-Placed piece R at square 27 (rank 3, file 3)
-Updating occupancy:
-  Piece P bitboard: 0
-  Piece N bitboard: 0
-  Piece B bitboard: 200000000000
-  Piece R bitboard: 40008000000
-  Piece Q bitboard: 0
-  Piece K bitboard: 0
-  Piece p bitboard: 0
-  Piece n bitboard: 0
-  Piece b bitboard: 0
-  Piece r bitboard: 0
-  Piece q bitboard: 0
-  Piece k bitboard: 0
-Updated occupancy:
-  White: 240008000000
-  Black: 0
-  Both: 240008000000
-error: 'main.test.bishop move generation - blocked by friendly pieces' failed: init board called herePlaced piece r at square 56 (rank 7, file 0)
-Placed piece n at square 57 (rank 7, file 1)
-Placed piece b at square 58 (rank 7, file 2)
-Placed piece q at square 59 (rank 7, file 3)
-Placed piece k at square 60 (rank 7, file 4)
-Placed piece b at square 61 (rank 7, file 5)
-Placed piece n at square 62 (rank 7, file 6)
-Placed piece r at square 63 (rank 7, file 7)
-Placed piece p at square 48 (rank 6, file 0)
-Placed piece p at square 49 (rank 6, file 1)
-Placed piece p at square 50 (rank 6, file 2)
-Placed piece p at square 51 (rank 6, file 3)
-Placed piece p at square 52 (rank 6, file 4)
-Placed piece p at square 53 (rank 6, file 5)
-Placed piece p at square 54 (rank 6, file 6)
-Placed piece p at square 55 (rank 6, file 7)
-Placed piece P at square 8 (rank 1, file 0)
-Placed piece P at square 9 (rank 1, file 1)
-Placed piece P at square 10 (rank 1, file 2)
-Placed piece P at square 11 (rank 1, file 3)
-Placed piece P at square 12 (rank 1, file 4)
-Placed piece P at square 13 (rank 1, file 5)
-Placed piece P at square 14 (rank 1, file 6)
-Placed piece P at square 15 (rank 1, file 7)
-Placed piece R at square 0 (rank 0, file 0)
-Placed piece N at square 1 (rank 0, file 1)
-Placed piece B at square 2 (rank 0, file 2)
-Placed piece Q at square 3 (rank 0, file 3)
-Placed piece K at square 4 (rank 0, file 4)
-Placed piece B at square 5 (rank 0, file 5)
-Placed piece N at square 6 (rank 0, file 6)
-Placed piece R at square 7 (rank 0, file 7)
-Updating occupancy:
-  Piece P bitboard: ff00
-  Piece N bitboard: 42
-  Piece B bitboard: 24
-  Piece R bitboard: 81
-  Piece Q bitboard: 8
-  Piece K bitboard: 10
-  Piece p bitboard: ff000000000000
-  Piece n bitboard: 4200000000000000
-  Piece b bitboard: 2400000000000000
-  Piece r bitboard: 8100000000000000
-  Piece q bitboard: 800000000000000
-  Piece k bitboard: 1000000000000000
-Updated occupancy:
-  White: ffff
-  Black: ffff000000000000
-  Both: ffff00000000ffff
-init board called herePlaced piece P at square 48 (rank 6, file 0)
-Placed piece p at square 8 (rank 1, file 0)
-Updating occupancy:
-  Piece P bitboard: 1000000000000
-  Piece N bitboard: 0
-  Piece B bitboard: 0
-  Piece R bitboard: 0
-  Piece Q bitboard: 0
-  Piece K bitboard: 0
-  Piece p bitboard: 100
-  Piece n bitboard: 0
-  Piece b bitboard: 0
-  Piece r bitboard: 0
-  Piece q bitboard: 0
-  Piece k bitboard: 0
-Updated occupancy:
-  White: 1000000000000
-  Black: 100
-  Both: 1000000000100
-init board called herePlaced piece p at square 32 (rank 4, file 0)
-Placed piece P at square 33 (rank 4, file 1)
-Updating occupancy:
-  Piece P bitboard: 200000000
-  Piece N bitboard: 0
-  Piece B bitboard: 0
-  Piece R bitboard: 0
-  Piece Q bitboard: 0
-  Piece K bitboard: 0
-  Piece p bitboard: 100000000
-  Piece n bitboard: 0
-  Piece b bitboard: 0
-  Piece r bitboard: 0
-  Piece q bitboard: 0
-  Piece k bitboard: 0
-Updated occupancy:
-  White: 200000000
-  Black: 100000000
-  Both: 300000000
-init board called herePlaced piece p at square 24 (rank 3, file 0)
-Placed piece p at square 25 (rank 3, file 1)
-Placed piece p at square 26 (rank 3, file 2)
-Placed piece p at square 27 (rank 3, file 3)
-Placed piece p at square 28 (rank 3, file 4)
-Placed piece p at square 29 (rank 3, file 5)
-Placed piece p at square 30 (rank 3, file 6)
-Placed piece p at square 31 (rank 3, file 7)
-Placed piece P at square 16 (rank 2, file 0)
-Placed piece P at square 17 (rank 2, file 1)
-Placed piece P at square 18 (rank 2, file 2)
-Placed piece P at square 19 (rank 2, file 3)
-Placed piece P at square 20 (rank 2, file 4)
-Placed piece P at square 21 (rank 2, file 5)
-Placed piece P at square 22 (rank 2, file 6)
-Placed piece P at square 23 (rank 2, file 7)
-Updating occupancy:
-  Piece P bitboard: ff0000
-  Piece N bitboard: 0
-  Piece B bitboard: 0
-  Piece R bitboard: 0
-  Piece Q bitboard: 0
-  Piece K bitboard: 0
-  Piece p bitboard: ff000000
-  Piece n bitboard: 0
-  Piece b bitboard: 0
-  Piece r bitboard: 0
-  Piece q bitboard: 0
-  Piece k bitboard: 0
-Updated occupancy:
-  White: ff0000
-  Black: ff000000
-  Both: ffff0000
-init board called herePlaced piece r at square 56 (rank 7, file 0)
-Placed piece n at square 57 (rank 7, file 1)
-Placed piece b at square 58 (rank 7, file 2)
-Placed piece q at square 59 (rank 7, file 3)
-Placed piece k at square 60 (rank 7, file 4)
-Placed piece b at square 61 (rank 7, file 5)
-Placed piece n at square 62 (rank 7, file 6)
-Placed piece r at square 63 (rank 7, file 7)
-Placed piece p at square 48 (rank 6, file 0)
-Placed piece p at square 49 (rank 6, file 1)
-Placed piece p at square 50 (rank 6, file 2)
-Placed piece p at square 51 (rank 6, file 3)
-Placed piece p at square 52 (rank 6, file 4)
-Placed piece p at square 53 (rank 6, file 5)
-Placed piece p at square 54 (rank 6, file 6)
-Placed piece p at square 55 (rank 6, file 7)
-Placed piece P at square 8 (rank 1, file 0)
-Placed piece P at square 9 (rank 1, file 1)
-Placed piece P at square 10 (rank 1, file 2)
-Placed piece P at square 11 (rank 1, file 3)
-Placed piece P at square 12 (rank 1, file 4)
-Placed piece P at square 13 (rank 1, file 5)
-Placed piece P at square 14 (rank 1, file 6)
-Placed piece P at square 15 (rank 1, file 7)
-Placed piece R at square 0 (rank 0, file 0)
-Placed piece N at square 1 (rank 0, file 1)
-Placed piece B at square 2 (rank 0, file 2)
-Placed piece Q at square 3 (rank 0, file 3)
-Placed piece K at square 4 (rank 0, file 4)
-Placed piece B at square 5 (rank 0, file 5)
-Placed piece N at square 6 (rank 0, file 6)
-Placed piece R at square 7 (rank 0, file 7)
-Updating occupancy:
-  Piece P bitboard: ff00
-  Piece N bitboard: 42
-  Piece B bitboard: 24
-  Piece R bitboard: 81
-  Piece Q bitboard: 8
-  Piece K bitboard: 10
-  Piece p bitboard: ff000000000000
-  Piece n bitboard: 4200000000000000
-  Piece b bitboard: 2400000000000000
-  Piece r bitboard: 8100000000000000
-  Piece q bitboard: 800000000000000
-  Piece k bitboard: 1000000000000000
-Updated occupancy:
-  White: ffff
-  Black: ffff000000000000
-  Both: ffff00000000ffff
-init board called herePlaced piece r at square 56 (rank 7, file 0)
-Placed piece n at square 57 (rank 7, file 1)
-Placed piece b at square 58 (rank 7, file 2)
-Placed piece q at square 59 (rank 7, file 3)
-Placed piece k at square 60 (rank 7, file 4)
-Placed piece b at square 61 (rank 7, file 5)
-Placed piece n at square 62 (rank 7, file 6)
-Placed piece r at square 63 (rank 7, file 7)
-Placed piece p at square 48 (rank 6, file 0)
-Placed piece p at square 49 (rank 6, file 1)
-Placed piece p at square 50 (rank 6, file 2)
-Placed piece p at square 51 (rank 6, file 3)
-Placed piece p at square 52 (rank 6, file 4)
-Placed piece p at square 53 (rank 6, file 5)
-Placed piece p at square 54 (rank 6, file 6)
-Placed piece p at square 55 (rank 6, file 7)
-Placed piece P at square 8 (rank 1, file 0)
-Placed piece P at square 9 (rank 1, file 1)
-Placed piece P at square 10 (rank 1, file 2)
-Placed piece P at square 11 (rank 1, file 3)
-Placed piece P at square 12 (rank 1, file 4)
-Placed piece P at square 13 (rank 1, file 5)
-Placed piece P at square 14 (rank 1, file 6)
-Placed piece P at square 15 (rank 1, file 7)
-Placed piece R at square 0 (rank 0, file 0)
-Placed piece N at square 1 (rank 0, file 1)
-Placed piece B at square 2 (rank 0, file 2)
-Placed piece Q at square 3 (rank 0, file 3)
-Placed piece K at square 4 (rank 0, file 4)
-Placed piece B at square 5 (rank 0, file 5)
-Placed piece N at square 6 (rank 0, file 6)
-Placed piece R at square 7 (rank 0, file 7)
-Updating occupancy:
-  Piece P bitboard: ff00
-  Piece N bitboard: 42
-  Piece B bitboard: 24
-  Piece R bitboard: 81
-  Piece Q bitboard: 8
-  Piece K bitboard: 10
-  Piece p bitboard: ff000000000000
-  Piece n bitboard: 4200000000000000
-  Piece b bitboard: 2400000000000000
-  Piece r bitboard: 8100000000000000
-  Piece q bitboard: 800000000000000
-  Piece k bitboard: 1000000000000000
-Updated occupancy:
-  White: ffff
-  Black: ffff000000000000
-  Both: ffff00000000ffff
-Placed piece K at square 27 (rank 3, file 3)
-Updating occupancy:
-  Piece P bitboard: 0
-  Piece N bitboard: 0
-  Piece B bitboard: 0
-  Piece R bitboard: 0
-  Piece Q bitboard: 0
-  Piece K bitboard: 8000000
-  Piece p bitboard: 0
-  Piece n bitboard: 0
-  Piece b bitboard: 0
-  Piece r bitboard: 0
-  Piece q bitboard: 0
-  Piece k bitboard: 0
-Updated occupancy:
-  White: 8000000
-  Black: 0
-  Both: 8000000
-Placed piece p at square 42 (rank 5, file 2)
-Placed piece p at square 43 (rank 5, file 3)
-Placed piece p at square 44 (rank 5, file 4)
-Placed piece p at square 34 (rank 4, file 2)
-Placed piece K at square 35 (rank 4, file 3)
-Placed piece p at square 36 (rank 4, file 4)
-Placed piece p at square 26 (rank 3, file 2)
-Placed piece p at square 27 (rank 3, file 3)
-Placed piece p at square 28 (rank 3, file 4)
-Updating occupancy:
-  Piece P bitboard: 0
-  Piece N bitboard: 0
-  Piece B bitboard: 0
-  Piece R bitboard: 0
-  Piece Q bitboard: 0
-  Piece K bitboard: 800000000
-  Piece p bitboard: 1c141c000000
-  Piece n bitboard: 0
-  Piece b bitboard: 0
-  Piece r bitboard: 0
-  Piece q bitboard: 0
-  Piece k bitboard: 0
-Updated occupancy:
-  White: 800000000
-  Black: 1c141c000000
-  Both: 1c1c1c000000
-init board called herePlaced piece R at square 27 (rank 3, file 3)
-Updating occupancy:
-  Piece P bitboard: 0
-  Piece N bitboard: 0
-  Piece B bitboard: 0
-  Piece R bitboard: 8000000
-  Piece Q bitboard: 0
-  Piece K bitboard: 0
-  Piece p bitboard: 0
-  Piece n bitboard: 0
-  Piece b bitboard: 0
-  Piece r bitboard: 0
-  Piece q bitboard: 0
-  Piece k bitboard: 0
-Updated occupancy:
-  White: 8000000
-  Black: 0
-  Both: 8000000
-init board called herePlaced piece P at square 35 (rank 4, file 3)
-Placed piece P at square 26 (rank 3, file 2)
-Placed piece R at square 27 (rank 3, file 3)
-Placed piece P at square 28 (rank 3, file 4)
-Placed piece P at square 19 (rank 2, file 3)
-Updating occupancy:
-  Piece P bitboard: 814080000
-  Piece N bitboard: 0
-  Piece B bitboard: 0
-  Piece R bitboard: 8000000
-  Piece Q bitboard: 0
-  Piece K bitboard: 0
-  Piece p bitboard: 0
-  Piece n bitboard: 0
-  Piece b bitboard: 0
-  Piece r bitboard: 0
-  Piece q bitboard: 0
-  Piece k bitboard: 0
-Updated occupancy:
-  White: 81c080000
-  Black: 0
-  Both: 81c080000
-init board called herePlaced piece p at square 43 (rank 5, file 3)
-Placed piece R at square 26 (rank 3, file 2)
-Placed piece p at square 28 (rank 3, file 4)
-Updating occupancy:
-  Piece P bitboard: 0
-  Piece N bitboard: 0
-  Piece B bitboard: 0
-  Piece R bitboard: 4000000
-  Piece Q bitboard: 0
-  Piece K bitboard: 0
-  Piece p bitboard: 80010000000
-  Piece n bitboard: 0
-  Piece b bitboard: 0
-  Piece r bitboard: 0
-  Piece q bitboard: 0
-  Piece k bitboard: 0
-Updated occupancy:
-  White: 4000000
-  Black: 80010000000
-  Both: 80014000000
-init board called herePlaced piece B at square 27 (rank 3, file 3)
-Updating occupancy:
-  Piece P bitboard: 0
-  Piece N bitboard: 0
-  Piece B bitboard: 8000000
-  Piece R bitboard: 0
-  Piece Q bitboard: 0
-  Piece K bitboard: 0
-  Piece p bitboard: 0
-  Piece n bitboard: 0
-  Piece b bitboard: 0
-  Piece r bitboard: 0
-  Piece q bitboard: 0
-  Piece k bitboard: 0
-Updated occupancy:
-  White: 8000000
-  Black: 0
-  Both: 8000000
-init board called herePlaced piece P at square 42 (rank 5, file 2)
-Placed piece B at square 35 (rank 4, file 3)
-Placed piece P at square 26 (rank 3, file 2)
-Updating occupancy:
-  Piece P bitboard: 40004000000
-  Piece N bitboard: 0
-  Piece B bitboard: 800000000
-  Piece R bitboard: 0
-  Piece Q bitboard: 0
-  Piece K bitboard: 0
-  Piece p bitboard: 0
-  Piece n bitboard: 0
-  Piece b bitboard: 0
-  Piece r bitboard: 0
-  Piece q bitboard: 0
-  Piece k bitboard: 0
-Updated occupancy:
-  White: 40804000000
-  Black: 0
-  Both: 40804000000
-expected 0, found 7
-/usr/lib/zig/lib/std/testing.zig:97:17: 0x104635c in expectEqualInner__anon_1960 (test)
-                return error.TestExpectedEqual;
-                ^
-/home/strydr/kirin-zig/src/main.zig:459:5: 0x10e4b47 in test.bishop move generation - blocked by friendly pieces (test)
-    try std.testing.expectEqual(@as(usize, 0), context.count);
-    ^
-error: while executing test 'main.test.sliding pieces - multiple pieces', the following test command failed:
-/home/strydr/kirin-zig/.zig-cache/o/d89197e7a012d4f935d548ffa21b1845/test --seed=0x441bb1b9 --cache-dir=/home/strydr/kirin-zig/.zig-cache --listen=- 
-Build Summary: 1/3 steps succeeded; 1 failed; 12/13 tests passed; 1 failed
-test transitive failure
-+- run test 12/13 passed, 1 failed
-error: the following build command failed with exit code 1:
-/home/strydr/kirin-zig/.zig-cache/o/50b4f575ec8277b0119198be63214d6a/build /usr/lib/zig/zig /usr/lib/zig/lib /home/strydr/kirin-zig /home/strydr/kirin-zig/.zig-cache /home/strydr/.cache/zig --seed 0x441bb1b9 -Z37cdaf7741a945ed test
+White pawn bitboard: 100000010000000000001110011100000000
+Pawn at square 8 has attack mask: 101000000000000000
+After masking with opponent pieces: 0
+Pawn at square 9 has attack mask: 1000000000000000000
+After masking with opponent pieces: 0
+Pawn at square 10 has attack mask: 10100000000000000000
+After masking with opponent pieces: 0
+Pawn at square 13 has attack mask: 10100000000000000000000
+After masking with opponent pieces: 0
+Pawn at square 14 has attack mask: 1000000000000000000000
+After masking with opponent pieces: 0
+Pawn at square 15 has attack mask: 1010000000000000000000000
+After masking with opponent pieces: 0
+Pawn at square 28 has attack mask: 10100000000000000000000000000000000000
+After masking with opponent pieces: 0
+Pawn at square 35 has attack mask: 101000000000000000000000000000000000000000000
+After masking with opponent pieces: 100000000000000000000000000000000000000000000
+
+Debug Move Generation for position:
+
+  8  r . . . k . . r
+  7  p . p p q p b .
+  6  b n . . p n p .
+  5  . . . P N . . .
+  4  . p . . P . . .
+  3  . . N . . Q . p
+  2  P P P B B P P P
+  1  R . . . K . . R
+
+     a b c d e f g h
+
+Side: white
+En passant: no
+Castling: KQkq
+
+Total moves generated: 47
+
+Moves by piece type:
+Pawn: a2-a3 (quiet)
+Pawn: a2-a4 (double push)
+Pawn: b2-b3 (quiet)
+Pawn: g2-g3 (quiet)
+Pawn: g2-g4 (double push)
+Pawn: d5-d6 (quiet)
+Pawn: d5-e6 (capture)
+Knight: c3-b1 (quiet)
+Knight: c3-d1 (quiet)
+Knight: c3-a4 (quiet)
+Knight: c3-b5 (quiet)
+Knight: e5-g6 (capture)
+Knight: e5-d7 (capture)
+Knight: e5-f7 (capture)
+Knight: e5-d3 (quiet)
+Knight: e5-c4 (quiet)
+Knight: e5-g4 (quiet)
+Knight: e5-c6 (quiet)
+Bishop: d2-c1 (quiet)
+Bishop: d2-e3 (quiet)
+Bishop: d2-f4 (quiet)
+Bishop: d2-g5 (quiet)
+Bishop: d2-h6 (quiet)
+Bishop: e2-a6 (capture)
+Bishop: e2-d1 (quiet)
+Bishop: e2-f1 (quiet)
+Bishop: e2-d3 (quiet)
+Bishop: e2-c4 (quiet)
+Bishop: e2-b5 (quiet)
+Rook: a1-b1 (quiet)
+Rook: a1-c1 (quiet)
+Rook: a1-d1 (quiet)
+Rook: h1-f1 (quiet)
+Rook: h1-g1 (quiet)
+Queen: f3-h3 (capture)
+Queen: f3-f6 (capture)
+Queen: f3-d3 (quiet)
+Queen: f3-e3 (quiet)
+Queen: f3-g3 (quiet)
+Queen: f3-f4 (quiet)
+Queen: f3-g4 (quiet)
+Queen: f3-f5 (quiet)
+Queen: f3-h5 (quiet)
+King: e1-d1 (quiet)
+King: e1-f1 (quiet)
+King: e1-g1 (castle)
+King: e1-c1 (castle)
+White pawn bitboard: 100000010000000000001110011100000000
+Pawn at square 8 has attack mask: 101000000000000000
+After masking with opponent pieces: 0
+Pawn at square 9 has attack mask: 1000000000000000000
+After masking with opponent pieces: 0
+Pawn at square 10 has attack mask: 10100000000000000000
+After masking with opponent pieces: 0
+Pawn at square 13 has attack mask: 10100000000000000000000
+After masking with opponent pieces: 0
+Pawn at square 14 has attack mask: 1000000000000000000000
+After masking with opponent pieces: 0
+Pawn at square 15 has attack mask: 1010000000000000000000000
+After masking with opponent pieces: 0
+Pawn at square 28 has attack mask: 10100000000000000000000000000000000000
+After masking with opponent pieces: 0
+Pawn at square 35 has attack mask: 101000000000000000000000000000000000000000000
+After masking with opponent pieces: 100000000000000000000000000000000000000000000
+Perft(1) found 47 nodes in 1ms
