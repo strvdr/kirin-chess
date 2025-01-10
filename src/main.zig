@@ -45,12 +45,12 @@ fn printMoveInfo(comptime prefix: []const u8, moves: []const movegen.Move) !void
     try stdout.print("\n", .{});
 }
 
-fn testPosition(b: *board.Board, attack_table: *attacks.AttackTable, fen: []const u8, position_name: []const u8) !void {
+fn testPosition(b: *board.Board, attackTable: *attacks.AttackTable, fen: []const u8, positionName: []const u8) !void {
     const stdout = std.io.getStdOut().writer();
 
     // Initialize position
     try utils.parseFEN(b, fen);
-    try stdout.print("\nTesting position: {s}\n", .{position_name});
+    try stdout.print("\nTesting position: {s}\n", .{positionName});
     utils.printBoard(b);
 
     // Create move collector and generate moves
@@ -62,15 +62,15 @@ fn testPosition(b: *board.Board, attack_table: *attacks.AttackTable, fen: []cons
     }.add;
 
     // Generate pawn moves for the current side
-    movegen.generatePawnMoves(b, attack_table, &collector, addMoveFn);
+    movegen.generatePawnMoves(b, attackTable, &collector, addMoveFn);
     try printMoveInfo("Legal pawn moves", collector.moves[0..collector.count]);
 }
 
 pub fn main() !void {
     // Initialize board and attack tables
     var b = board.Board.init();
-    var attack_table: attacks.AttackTable = undefined;
-    attack_table.init();
+    var attackTable: attacks.AttackTable = undefined;
+    attackTable.init();
 
     // Test rook moves
     try utils.parseFEN(&b, "8/8/3p4/8/2R1p3/8/8/8 w - - 0 1");
@@ -79,54 +79,54 @@ pub fn main() !void {
 
     const rook_square = 26; // c4
     std.debug.print("\nRook attack mask (ignoring occupancy):\n", .{});
-    utils.printBitboard(attack_table.rook_masks[rook_square]);
+    utils.printBitboard(attackTable.rookMasks[rook_square]);
 
     std.debug.print("\nOccupancy bitboard:\n", .{});
     utils.printBitboard(b.occupancy[2]);
 
-    const rook_attacks = attacks.getRookAttacks(rook_square, b.occupancy[2], &attack_table);
+    const rookAttacks = attacks.getRookAttacks(rook_square, b.occupancy[2], &attackTable);
     std.debug.print("\nRook attacks with current occupancy:\n", .{});
-    utils.printBitboard(rook_attacks);
+    utils.printBitboard(rookAttacks);
 
-    const friendly_pieces = b.occupancy[@intFromEnum(b.sideToMove)];
+    const friendlyPieces = b.occupancy[@intFromEnum(b.sideToMove)];
     std.debug.print("\nFriendly pieces bitboard:\n", .{});
-    utils.printBitboard(friendly_pieces);
+    utils.printBitboard(friendlyPieces);
 
-    const opponent_pieces = b.occupancy[@intFromEnum(b.sideToMove.opposite())];
+    const opponentPieces = b.occupancy[@intFromEnum(b.sideToMove.opposite())];
     std.debug.print("\nOpponent pieces bitboard:\n", .{});
-    utils.printBitboard(opponent_pieces);
+    utils.printBitboard(opponentPieces);
 
-    const legal_rook_moves = rook_attacks & ~friendly_pieces;
+    const legalRookMoves = rookAttacks & ~friendlyPieces;
     std.debug.print("\nLegal rook moves after removing friendly pieces:\n", .{});
-    utils.printBitboard(legal_rook_moves);
+    utils.printBitboard(legalRookMoves);
 
     // Test bishop moves
     try utils.parseFEN(&b, "8/8/5p2/4B3/2p5/8/8/8 w - - 0 1");
     std.debug.print("\nTesting bishop moves:\n", .{});
     utils.printBoard(&b);
 
-    const bishop_square = 36; // e5
+    const bishopSquare = 36; // e5
     std.debug.print("\nBishop attack mask (ignoring occupancy):\n", .{});
-    utils.printBitboard(attack_table.bishop_masks[bishop_square]);
+    utils.printBitboard(attackTable.bishopMasks[bishopSquare]);
 
     std.debug.print("\nOccupancy bitboard:\n", .{});
     utils.printBitboard(b.occupancy[2]);
 
-    const bishop_attacks = attacks.getBishopAttacks(bishop_square, b.occupancy[2], &attack_table);
+    const bishopAttacks = attacks.getBishopAttacks(bishopSquare, b.occupancy[2], &attackTable);
     std.debug.print("\nBishop attacks with current occupancy:\n", .{});
-    utils.printBitboard(bishop_attacks);
+    utils.printBitboard(bishopAttacks);
 
-    const friendly_pieces_bishop = b.occupancy[@intFromEnum(b.sideToMove)];
+    const friendlyPiecesBishop = b.occupancy[@intFromEnum(b.sideToMove)];
     std.debug.print("\nFriendly pieces bitboard:\n", .{});
-    utils.printBitboard(friendly_pieces_bishop);
+    utils.printBitboard(friendlyPiecesBishop);
 
-    const opponent_pieces_bishop = b.occupancy[@intFromEnum(b.sideToMove.opposite())];
+    const opponentPiecesBishop = b.occupancy[@intFromEnum(b.sideToMove.opposite())];
     std.debug.print("\nOpponent pieces bitboard:\n", .{});
-    utils.printBitboard(opponent_pieces_bishop);
+    utils.printBitboard(opponentPiecesBishop);
 
-    const legal_bishop_moves = bishop_attacks & ~friendly_pieces_bishop;
+    const legalBishopMoves = bishopAttacks & ~friendlyPiecesBishop;
     std.debug.print("\nLegal bishop moves after removing friendly pieces:\n", .{});
-    utils.printBitboard(legal_bishop_moves);
+    utils.printBitboard(legalBishopMoves);
 
     // Print final move counts
     var collector = MoveCollector{};
@@ -137,19 +137,19 @@ pub fn main() !void {
     }.add;
 
     collector.clear();
-    movegen.generateSlidingMoves(&b, &attack_table, &collector, addMoveFn, true);
+    movegen.generateSlidingMoves(&b, &attackTable, &collector, addMoveFn, true);
     try printMoveInfo("Legal bishop moves", collector.moves[0..collector.count]);
 
     try utils.parseFEN(&b, "8/8/3p4/8/2R1p3/8/8/8 w - - 0 1");
     collector.clear();
-    movegen.generateSlidingMoves(&b, &attack_table, &collector, addMoveFn, false);
+    movegen.generateSlidingMoves(&b, &attackTable, &collector, addMoveFn, false);
     try printMoveInfo("Legal rook moves", collector.moves[0..collector.count]);
 }
 
 test "pawn move generation" {
     var b = board.Board.init();
-    var attack_table: attacks.AttackTable = undefined;
-    attack_table.init();
+    var attackTable: attacks.AttackTable = undefined;
+    attackTable.init();
 
     // Structure to count moves
     const Context = struct {
@@ -169,7 +169,7 @@ test "pawn move generation" {
 
     // Test initial position white pawn moves
     try utils.parseFEN(&b, "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
-    movegen.generatePawnMoves(&b, &attack_table, &context, countMoveFn);
+    movegen.generatePawnMoves(&b, &attackTable, &context, countMoveFn);
 
     // In the initial position, each pawn should have 2 possible moves (single and double push)
     try std.testing.expectEqual(@as(usize, 8), context.count);
@@ -177,8 +177,8 @@ test "pawn move generation" {
 
 test "pawn promotion generation" {
     var b = board.Board.init();
-    var attack_table: attacks.AttackTable = undefined;
-    attack_table.init();
+    var attackTable: attacks.AttackTable = undefined;
+    attackTable.init();
 
     const Context = struct {
         count: usize = 0,
@@ -197,7 +197,7 @@ test "pawn promotion generation" {
 
     // Test a position where a pawn can promote
     try utils.parseFEN(&b, "8/P7/8/8/8/8/p7/8 w - - 0 1");
-    movegen.generatePawnMoves(&b, &attack_table, &context, countMoveFn);
+    movegen.generatePawnMoves(&b, &attackTable, &context, countMoveFn);
 
     // Each pawn promotion generates 4 moves (queen, rook, bishop, knight)
     try std.testing.expectEqual(@as(usize, 4), context.count);
@@ -205,8 +205,8 @@ test "pawn promotion generation" {
 
 test "en passant generation" {
     var b = board.Board.init();
-    var attack_table: attacks.AttackTable = undefined;
-    attack_table.init();
+    var attackTable: attacks.AttackTable = undefined;
+    attackTable.init();
 
     const Context = struct {
         count: usize = 0,
@@ -225,7 +225,7 @@ test "en passant generation" {
 
     // Test a position where en passant is possible
     try utils.parseFEN(&b, "8/8/8/pP6/8/8/8/8 w - a6 0 1");
-    movegen.generatePawnMoves(&b, &attack_table, &context, countMoveFn);
+    movegen.generatePawnMoves(&b, &attackTable, &context, countMoveFn);
 
     // There should be exactly 1 en passant move
     try std.testing.expectEqual(@as(usize, 1), context.count);
@@ -233,8 +233,8 @@ test "en passant generation" {
 
 test "blocked pawn moves" {
     var b = board.Board.init();
-    var attack_table: attacks.AttackTable = undefined;
-    attack_table.init();
+    var attackTable: attacks.AttackTable = undefined;
+    attackTable.init();
 
     const Context = struct {
         count: usize = 0,
@@ -253,7 +253,7 @@ test "blocked pawn moves" {
 
     // Test a position where pawns are blocked by pieces
     try utils.parseFEN(&b, "8/8/8/8/pppppppp/PPPPPPPP/8/8 w - - 0 1");
-    movegen.generatePawnMoves(&b, &attack_table, &context, countMoveFn);
+    movegen.generatePawnMoves(&b, &attackTable, &context, countMoveFn);
 
     // No pawn moves should be generated as all pawns are blocked
     try std.testing.expectEqual(@as(usize, 12), context.count);
@@ -261,8 +261,8 @@ test "blocked pawn moves" {
 
 test "knight move generation" {
     var b = board.Board.init();
-    var attack_table: attacks.AttackTable = undefined;
-    attack_table.init();
+    var attackTable: attacks.AttackTable = undefined;
+    attackTable.init();
 
     const Context = struct {
         count: usize = 0,
@@ -281,15 +281,15 @@ test "knight move generation" {
 
     // Test initial position knight moves
     try utils.parseFEN(&b, "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
-    movegen.generateKnightMoves(&b, &attack_table, &context, countMoveFn);
+    movegen.generateKnightMoves(&b, &attackTable, &context, countMoveFn);
     // In the initial position, each knight should have 2 possible moves
     try std.testing.expectEqual(@as(usize, 4), context.count);
 }
 
 test "king move generation" {
     var b = board.Board.init();
-    var attack_table: attacks.AttackTable = undefined;
-    attack_table.init();
+    var attackTable: attacks.AttackTable = undefined;
+    attackTable.init();
 
     const Context = struct {
         count: usize = 0,
@@ -308,7 +308,7 @@ test "king move generation" {
 
     // Test initial position - king should have no legal moves
     try utils.parseFEN(&b, "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
-    movegen.generateKingMoves(&b, &attack_table, &context, countMoveFn);
+    movegen.generateKingMoves(&b, &attackTable, &context, countMoveFn);
     try std.testing.expectEqual(@as(usize, 0), context.count);
 
     // Reset context
@@ -316,7 +316,7 @@ test "king move generation" {
 
     // Test king in the middle of an empty board - should have 8 moves
     try utils.parseFEN(&b, "8/8/8/8/3K4/8/8/8 w - - 0 1");
-    movegen.generateKingMoves(&b, &attack_table, &context, countMoveFn);
+    movegen.generateKingMoves(&b, &attackTable, &context, countMoveFn);
     try std.testing.expectEqual(@as(usize, 8), context.count);
 
     // Reset context
@@ -324,14 +324,14 @@ test "king move generation" {
 
     // Test king captures - surrounded by enemy pieces
     try utils.parseFEN(&b, "8/8/2ppp3/2pKp3/2ppp3/8/8/8 w - - 0 1");
-    movegen.generateKingMoves(&b, &attack_table, &context, countMoveFn);
+    movegen.generateKingMoves(&b, &attackTable, &context, countMoveFn);
     try std.testing.expectEqual(@as(usize, 8), context.count);
 }
 
 test "rook move generation - open board" {
     var b = board.Board.init();
-    var attack_table: attacks.AttackTable = undefined;
-    attack_table.init();
+    var attackTable: attacks.AttackTable = undefined;
+    attackTable.init();
 
     const Context = struct {
         count: usize = 0,
@@ -349,14 +349,14 @@ test "rook move generation - open board" {
     }.add;
 
     try utils.parseFEN(&b, "8/8/8/8/3R4/8/8/8 w - - 0 1");
-    movegen.generateSlidingMoves(&b, &attack_table, &context, countMoveFn, false); // false for rook
+    movegen.generateSlidingMoves(&b, &attackTable, &context, countMoveFn, false); // false for rook
     try std.testing.expectEqual(@as(usize, 14), context.count);
 }
 
 test "rook move generation - blocked by friendly pieces" {
     var b = board.Board.init();
-    var attack_table: attacks.AttackTable = undefined;
-    attack_table.init();
+    var attackTable: attacks.AttackTable = undefined;
+    attackTable.init();
 
     const Context = struct {
         count: usize = 0,
@@ -374,21 +374,21 @@ test "rook move generation - blocked by friendly pieces" {
     }.add;
 
     try utils.parseFEN(&b, "8/8/8/3P4/2PRP3/3P4/8/8 w - - 0 1");
-    movegen.generateSlidingMoves(&b, &attack_table, &context, countMoveFn, false);
+    movegen.generateSlidingMoves(&b, &attackTable, &context, countMoveFn, false);
     try std.testing.expectEqual(@as(usize, 0), context.count);
 }
 
 test "rook move generation - captures" {
     var b = board.Board.init();
-    var attack_table: attacks.AttackTable = undefined;
-    attack_table.init();
+    var attackTable: attacks.AttackTable = undefined;
+    attackTable.init();
 
     const Context = struct {
         captures: usize = 0,
         quiet: usize = 0,
 
         fn countMove(self: *@This(), move: movegen.Move) void {
-            switch (move.move_type) {
+            switch (move.moveType) {
                 .capture => self.captures += 1,
                 .quiet => self.quiet += 1,
                 else => {},
@@ -404,15 +404,15 @@ test "rook move generation - captures" {
     }.add;
 
     try utils.parseFEN(&b, "8/8/3p4/8/2R1p3/8/8/8 w - - 0 1");
-    movegen.generateSlidingMoves(&b, &attack_table, &context, countMoveFn, false);
+    movegen.generateSlidingMoves(&b, &attackTable, &context, countMoveFn, false);
     try std.testing.expectEqual(@as(usize, 1), context.captures);
     try std.testing.expectEqual(@as(usize, 10), context.quiet);
 }
 
 test "bishop move generation - open board" {
     var b = board.Board.init();
-    var attack_table: attacks.AttackTable = undefined;
-    attack_table.init();
+    var attackTable: attacks.AttackTable = undefined;
+    attackTable.init();
 
     const Context = struct {
         count: usize = 0,
@@ -430,14 +430,14 @@ test "bishop move generation - open board" {
     }.add;
 
     try utils.parseFEN(&b, "8/8/8/8/3B4/8/8/8 w - - 0 1");
-    movegen.generateSlidingMoves(&b, &attack_table, &context, countMoveFn, true); // true for bishop
+    movegen.generateSlidingMoves(&b, &attackTable, &context, countMoveFn, true); // true for bishop
     try std.testing.expectEqual(@as(usize, 13), context.count);
 }
 
 test "bishop move generation - blocked by friendly pieces" {
     var b = board.Board.init();
-    var attack_table: attacks.AttackTable = undefined;
-    attack_table.init();
+    var attackTable: attacks.AttackTable = undefined;
+    attackTable.init();
 
     const Context = struct {
         count: usize = 0,
@@ -455,21 +455,21 @@ test "bishop move generation - blocked by friendly pieces" {
     }.add;
 
     try utils.parseFEN(&b, "8/8/2P5/3B4/2P5/8/8/8 w - - 0 1");
-    movegen.generateSlidingMoves(&b, &attack_table, &context, countMoveFn, true);
+    movegen.generateSlidingMoves(&b, &attackTable, &context, countMoveFn, true);
     try std.testing.expectEqual(@as(usize, 7), context.count);
 }
 
 test "bishop move generation - captures" {
     var b = board.Board.init();
-    var attack_table: attacks.AttackTable = undefined;
-    attack_table.init();
+    var attackTable: attacks.AttackTable = undefined;
+    attackTable.init();
 
     const Context = struct {
         captures: usize = 0,
         quiet: usize = 0,
 
         fn countMove(self: *@This(), move: movegen.Move) void {
-            switch (move.move_type) {
+            switch (move.moveType) {
                 .capture => self.captures += 1,
                 .quiet => self.quiet += 1,
                 else => {},
@@ -485,15 +485,15 @@ test "bishop move generation - captures" {
     }.add;
 
     try utils.parseFEN(&b, "8/8/5p2/4B3/2p5/8/8/8 w - - 0 1");
-    movegen.generateSlidingMoves(&b, &attack_table, &context, countMoveFn, true);
+    movegen.generateSlidingMoves(&b, &attackTable, &context, countMoveFn, true);
     try std.testing.expectEqual(@as(usize, 1), context.captures);
     try std.testing.expectEqual(@as(usize, 10), context.quiet);
 }
 
 test "sliding pieces - multiple pieces" {
     var b = board.Board.init();
-    var attack_table: attacks.AttackTable = undefined;
-    attack_table.init();
+    var attackTable: attacks.AttackTable = undefined;
+    attackTable.init();
 
     const Context = struct {
         count: usize = 0,
@@ -514,14 +514,14 @@ test "sliding pieces - multiple pieces" {
 
     // Count rook moves
     context.count = 0;
-    movegen.generateSlidingMoves(&b, &attack_table, &context, countMoveFn, false);
-    const rook_moves = context.count;
+    movegen.generateSlidingMoves(&b, &attackTable, &context, countMoveFn, false);
+    const rookMoves = context.count;
 
     // Count bishop moves
     context.count = 0;
-    movegen.generateSlidingMoves(&b, &attack_table, &context, countMoveFn, true);
-    const bishop_moves = context.count;
+    movegen.generateSlidingMoves(&b, &attackTable, &context, countMoveFn, true);
+    const bishopMoves = context.count;
 
-    try std.testing.expect(rook_moves > 0);
-    try std.testing.expect(bishop_moves > 0);
+    try std.testing.expect(rookMoves > 0);
+    try std.testing.expect(bishopMoves > 0);
 }

@@ -484,5 +484,3 @@ pub const Display = struct {
     pub const asciiPieces: []const u8 = "PNBRQKpnbrqk";
     pub const unicodePieces: [12][]const u8 = .{ "♙", "♘", "♗", "♖", "♕", "♔", "♟︎", "♞", "♝", "♜", "♛", "♚" };
 };
-
-pub var state: u64 = 1804289383;

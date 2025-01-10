@@ -47,60 +47,60 @@ fn generateMagicNumber() u64 {
     return getRandomU64() & getRandomU64() & getRandomU64();
 }
 
-fn findMagicNumber(square: u6, relevant_bits: u5, is_bishop: bool) u64 {
+fn findMagicNumber(square: u6, relevantBits: u5, is_bishop: bool) u64 {
     var occupancies: [4096]u64 = undefined;
-    var possible_attacks: [4096]u64 = undefined;
-    var used_attacks: [4096]u64 = undefined;
+    var possibleAttacks: [4096]u64 = undefined;
+    var usedAttacks: [4096]u64 = undefined;
 
     // Get the attack mask for this square
-    const attack_mask = if (is_bishop)
+    const attackMask = if (is_bishop)
         attacks.maskBishopAttacks(square)
     else
         attacks.maskRookAttacks(square);
 
     // Initialize occupancy indices
-    const occupancy_indices = @as(u64, 1) << relevant_bits;
+    const occupancyIndices = @as(u64, 1) << relevantBits;
 
     // Generate all possible occupancies and their corresponding attacks
-    for (0..occupancy_indices) |index| {
-        occupancies[index] = utils.setOccupancy(@intCast(index), relevant_bits, attack_mask);
-        possible_attacks[index] = if (is_bishop)
+    for (0..occupancyIndices) |index| {
+        occupancies[index] = utils.setOccupancy(@intCast(index), relevantBits, attackMask);
+        possibleAttacks[index] = if (is_bishop)
             attacks.bishopAttacksOTF(square, occupancies[index])
         else
             attacks.rookAttacksOTF(square, occupancies[index]);
     }
 
     // Try to find a magic number
-    var try_count: u32 = 0;
-    while (try_count < MAX_TRIES) : (try_count += 1) {
-        const magic_candidate = generateMagicNumber();
+    var tryCount: u32 = 0;
+    while (tryCount < MAX_TRIES) : (tryCount += 1) {
+        const magicCandidate = generateMagicNumber();
 
         // Skip if the magic number doesn't have enough high bits set
-        if (utils.countBits((attack_mask *% magic_candidate) & 0xFF00000000000000) < REQUIRED_HIGH_BITS) {
+        if (utils.countBits((attackMask *% magicCandidate) & 0xFF00000000000000) < REQUIRED_HIGH_BITS) {
             continue;
         }
 
         // Reset the used attacks array
-        @memset(&used_attacks, 0);
+        @memset(&usedAttacks, 0);
 
         // Test if this magic number works
         var index: u32 = 0;
         var failed = false;
-        while (!failed and index < occupancy_indices) : (index += 1) {
-            const magic_index = @as(u12, @intCast((occupancies[index] *% magic_candidate) >>
-                @intCast(@as(u8, 64) - relevant_bits)));
+        while (!failed and index < occupancyIndices) : (index += 1) {
+            const magicIndex = @as(u12, @intCast((occupancies[index] *% magicCandidate) >>
+                @intCast(@as(u8, 64) - relevantBits)));
 
             // Check for collisions
-            if (used_attacks[magic_index] == 0) {
-                used_attacks[magic_index] = possible_attacks[index];
-            } else if (used_attacks[magic_index] != possible_attacks[index]) {
+            if (usedAttacks[magicIndex] == 0) {
+                usedAttacks[magicIndex] = possibleAttacks[index];
+            } else if (usedAttacks[magicIndex] != possibleAttacks[index]) {
                 failed = true;
             }
         }
 
         if (!failed) {
-            std.debug.print("Found magic number for square {d} ({c}{c}) after {d} tries: 0x{x:0>16}\n", .{ square, @as(u8, 'a') + @as(u8, @intCast(square % 8)), @as(u8, '1') + @as(u8, @intCast(square / 8)), try_count, magic_candidate });
-            return magic_candidate;
+            std.debug.print("Found magic number for square {d} ({c}{c}) after {d} tries: 0x{x:0>16}\n", .{ square, @as(u8, 'a') + @as(u8, @intCast(square % 8)), @as(u8, '1') + @as(u8, @intCast(square / 8)), tryCount, magicCandidate });
+            return magicCandidate;
         }
     }
 
@@ -141,44 +141,44 @@ pub fn main() !void {
 }
 
 // Verify that a magic number works correctly
-fn verifyMagicNumber(square: u6, magic: u64, relevant_bits: u5, is_bishop: bool) !void {
-    var attack_table: attacks.AttackTable = undefined;
-    attack_table.init();
+fn verifyMagicNumber(square: u6, magic: u64, relevantBits: u5, is_bishop: bool) !void {
+    var attackTable: attacks.AttackTable = undefined;
+    attackTable.init();
 
     const mask = if (is_bishop)
-        attack_table.bishop_masks[square]
+        attackTable.bishop_masks[square]
     else
-        attack_table.rook_masks[square];
+        attackTable.rook_masks[square];
 
-    const max_index = @as(u64, 1) << relevant_bits;
-    var used_indices = std.AutoHashMap(u12, u64).init(std.heap.page_allocator);
-    defer used_indices.deinit();
+    const maxIndex = @as(u64, 1) << relevantBits;
+    var usedIndices = std.AutoHashMap(u12, u64).init(std.heap.page_allocator);
+    defer usedIndices.deinit();
 
     var i: u64 = 0;
-    while (i < max_index) : (i += 1) {
-        const occupancy = utils.setOccupancy(i, relevant_bits, mask);
-        const magic_index = @as(u12, @intCast((occupancy *% magic) >> @intCast(64 - relevant_bits)));
+    while (i < maxIndex) : (i += 1) {
+        const occupancy = utils.setOccupancy(i, relevantBits, mask);
+        const magicIndex = @as(u12, @intCast((occupancy *% magic) >> @intCast(64 - relevantBits)));
 
-        const attack_pattern = if (is_bishop)
+        const attackPattern = if (is_bishop)
             attacks.bishopAttacksOTF(square, occupancy)
         else
             attacks.rookAttacksOTF(square, occupancy);
 
-        if (used_indices.get(magic_index)) |previous_attacks| {
-            if (previous_attacks != attack_pattern) {
+        if (usedIndices.get(magicIndex)) |previousAttacks| {
+            if (previousAttacks != attackPattern) {
                 return error.MagicCollision;
             }
         } else {
-            try used_indices.put(magic_index, attack_pattern);
+            try usedIndices.put(magicIndex, attackPattern);
         }
     }
 }
 
 test "magic number verification" {
     // Test both bishop and rook magic numbers for a few key squares
-    const test_squares = [_]u6{ 0, 27, 63 }; // corners and center
+    const testSquares = [_]u6{ 0, 27, 63 }; // corners and center
 
-    for (test_squares) |square| {
+    for (testSquares) |square| {
         try verifyMagicNumber(square, bitboard.Magic.bishopMagicNumbers[square], bitboard.Magic.bishopRelevantBits[square], true);
 
         try verifyMagicNumber(square, bitboard.Magic.rookMagicNumbers[square], bitboard.Magic.rookRelevantBits[square], false);
