@@ -90,15 +90,26 @@ pub const AttackTable = struct {
 fn maskPawnAttacks(side: board.Side, square: u6) u64 {
     var attacks: u64 = 0;
     const bb: u64 = @as(u64, 1) << square;
+    const file = square % 8;
 
     switch (side) {
         .white => {
-            if ((bb << 7) & FileMask.notA != 0) attacks |= bb << 7;
-            if ((bb << 9) & FileMask.notH != 0) attacks |= bb << 9;
+            if (file == 0) {} else {
+                attacks |= bb << 7;
+            }
+
+            if (file == 7) {} else {
+                attacks |= bb << 9;
+            }
         },
         .black => {
-            if ((bb >> 7) & FileMask.notH != 0) attacks |= bb >> 7;
-            if ((bb >> 9) & FileMask.notA != 0) attacks |= bb >> 9;
+            if (file == 7) {} else {
+                attacks |= bb >> 7;
+            }
+
+            if (file == 0) {} else {
+                attacks |= bb >> 9;
+            }
         },
         .both => {},
     }
@@ -363,7 +374,7 @@ pub fn getRookAttacks(square: u6, occupancy: u64, table: *const AttackTable) u64
 }
 
 pub fn isSquareAttacked(square: u6, side: board.Side, gameBoard: *const board.Board, table: *const AttackTable) bool {
-    const pieceSide = if (side == .white) board.Piece.P else board.Piece.p;
+    const pieceSide = if (side == .white) board.Piece.p else board.Piece.p;
 
     // Pawn attacks
     if ((table.pawn[@intFromEnum(side.opposite())][square] & gameBoard.bitboard[@intFromEnum(pieceSide)]) != 0) return true;

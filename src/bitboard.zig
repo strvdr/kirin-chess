@@ -306,10 +306,11 @@ pub const Board = struct {
         else
             self.bitboard[@intFromEnum(Piece.k)];
 
-        if (kingBB == 0) return false; // No king found (shouldn't happen in valid game)
+        if (kingBB == 0) return false;
 
         const kingSquare = @as(u6, @intCast(utils.getLSBindex(kingBB)));
-        return attacks.isSquareAttacked(kingSquare, side.opposite(), self, attackTable);
+        // Pass the attacking side directly rather than calculating opposite twice
+        return attacks.isSquareAttacked(kingSquare, side, self, attackTable); // removed .opposite()
     }
 
     pub fn makeMove(self: *Board, move: movegen.Move, attackTable: *const attacks.AttackTable) !void {

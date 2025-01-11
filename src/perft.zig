@@ -112,16 +112,18 @@ pub const Perft = struct {
         for (moves.getMoves()) |move| {
             // Make move on a copy of the board
             var board_copy = self.board.*;
-            board_copy.makeMoveUnchecked(move);
-
-            // Recurse and count nodes
-            nodes += self.perftCount(depth - 1);
+            // Try to make the move, skip if it leaves/puts king in check
+            if (board_copy.makeMove(move, self.attack_table)) |_| {
+                nodes += self.perftCount(depth - 1);
+            } else |_| {
+                // Move was illegal (probably leaves king in check), skip it
+                continue;
+            }
         }
 
         return nodes;
     }
-
-    /// Performs a detailed perft analysis and prints move breakdowns
+    // Performs a detailed perft analysis and prints move breakdowns
     pub fn perftDivide(self: *Perft, depth: u32) !PerftResult {
         var total = PerftResult{};
         var moves = movegen.MoveList.init();

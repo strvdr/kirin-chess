@@ -20,6 +20,7 @@ const attacks = @import("attacks.zig");
 const movegen = @import("movegen.zig");
 const utils = @import("utils.zig");
 const Perft = @import("perft.zig");
+const magic = @import("magics.zig");
 
 const MoveCollector = struct {
     moves: [256]movegen.Move = undefined,
@@ -85,10 +86,10 @@ pub fn main() !void {
 
     // Run perft test
     const timer = Perft.Timer.start();
-    const nodes = perft.perftCount(1);
+    const nodes = perft.perftCount(2);
     const elapsed = timer.elapsed();
 
-    std.debug.print("Perft(1) found {d} nodes in {d}ms\n", .{ nodes, elapsed });
+    std.debug.print("Perft(2) found {d} nodes in {d}ms\n", .{ nodes, elapsed });
 }
 
 test "make move - quiet moves" {
