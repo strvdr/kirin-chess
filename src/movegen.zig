@@ -167,25 +167,18 @@ pub fn generatePawnMoves(
     else
         board.bitboard[@intFromEnum(bitboard.Piece.p)];
     const opponentPieces = board.occupancy[@intFromEnum(side.opposite())];
-    std.debug.print("White pawn bitboard: {b}\n", .{pawnBB});
     var bbCopy = pawnBB;
 
     // Direction of pawn movement and ranks
-    const pushOffset: i8 = if (side == .white) 8 else -8;
-    const startingRank: i8 = if (side == .white) 1 else 6;
-    const promotionRank: i8 = if (side == .white) 7 else 0;
+    const pushOffset: i8 = if (side == .white) -8 else 8;
+    const startingRank: i8 = if (side == .white) 6 else 1;
+    const promotionRank: i8 = if (side == .white) 0 else 7;
 
     while (bbCopy != 0) {
         const from = utils.getLSBindex(bbCopy);
         if (from < 0) break;
         const fromSquare = @as(u6, @intCast(from));
         const fromRank = @divFloor(@as(i8, from), 8);
-
-        const attackMask = attackTable.pawn[@intFromEnum(side)][@intCast(from)];
-        std.debug.print("Pawn at square {d} has attack mask: {b}\n", .{ from, attackMask });
-
-        const actualAttacks = attackMask & opponentPieces;
-        std.debug.print("After masking with opponent pieces: {b}\n", .{actualAttacks});
 
         // Single push
         const to = @as(i8, from) + pushOffset;

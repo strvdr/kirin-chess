@@ -16,12 +16,22 @@ pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
 
     const exe = b.addExecutable(.{
-        .name = "kirin-zig",
+        .name = "kirin-chess",
         .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
     });
 
+    const tests = b.addTest(.{
+        .root_source_file = b.path("src/tests.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    const runTests = b.addRunArtifact(tests);
+
+    const testStep = b.step("testRunner", "Run all tests");
+    testStep.dependOn(&runTests.step);
     // This declares intent for the executable to be installed into the
     // standard location when the user invokes the "install" step (the default
     // step when running `zig build`).

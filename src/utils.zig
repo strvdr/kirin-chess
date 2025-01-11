@@ -182,7 +182,7 @@ pub fn parseFEN(b: *board.Board, fen: []const u8) !void {
 }
 
 fn parsePiecePositions(b: *board.Board, fen: []const u8, fenIndex: *usize) !void {
-    var rank: isize = 7; // Start at rank 8 (top of the bitboard)
+    var rank: usize = 0; // Start at rank 8 (top of the bitboard, square 0)
     var file: usize = 0;
 
     while (fenIndex.* < fen.len) {
@@ -194,7 +194,7 @@ fn parsePiecePositions(b: *board.Board, fen: []const u8, fenIndex: *usize) !void
 
         if (c == '/') {
             file = 0;
-            rank -= 1;
+            rank += 1; // Move down one rank
             fenIndex.* += 1;
             continue;
         }
@@ -203,9 +203,8 @@ fn parsePiecePositions(b: *board.Board, fen: []const u8, fenIndex: *usize) !void
             file += c - '0';
             fenIndex.* += 1;
         } else {
-            // Convert rank to usize before multiplication
-            const urank = @as(usize, @intCast(rank));
-            const square = @as(u6, @intCast(urank * 8 + file));
+            // Convert rank and file to square number
+            const square = @as(u6, @intCast(rank * 8 + file));
 
             const piece = charToPiece(c) orelse return error.InvalidPiece;
             utils.setBit(&b.bitboard[@intFromEnum(piece)], square);

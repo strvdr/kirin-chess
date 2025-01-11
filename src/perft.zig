@@ -50,52 +50,44 @@ pub const Perft = struct {
             .attack_table = atk,
         };
     }
-
     pub fn debugMoveGeneration(self: *Perft) void {
-        var moves = movegen.MoveList.init();
+        var all_moves = movegen.MoveList.init();
 
-        // Generate all moves and store them in categories
-        self.generateAllMoves(&moves);
+        // Generate all moves at once for total count
+        self.generateAllMoves(&all_moves);
 
         std.debug.print("\nDebug Move Generation for position:\n", .{});
         utils.printBoard(self.board);
 
-        std.debug.print("\nTotal moves generated: {d}\n", .{moves.count});
+        std.debug.print("\nTotal moves possible: {d}\n", .{all_moves.count});
         std.debug.print("\nMoves by piece type:\n", .{});
 
-        // Print moves by piece type
-        for (moves.getMoves()) |move| {
-            const fromCoords = move.from.toCoordinates() catch unreachable;
-            const toCoords = move.to.toCoordinates() catch unreachable;
+        // Now generate and print moves by piece type
+        var moves = movegen.MoveList.init();
 
-            const pieceType = switch (move.piece) {
-                .P, .p => "Pawn",
-                .N, .n => "Knight",
-                .B, .b => "Bishop",
-                .R, .r => "Rook",
-                .Q, .q => "Queen",
-                .K, .k => "King",
-            };
+        moves.clear();
+        movegen.generatePawnMoves(self.board, self.attack_table, &moves, movegen.MoveList.addMoveCallback);
+        printMovesByPiece(&moves);
 
-            const moveType = switch (move.moveType) {
-                .quiet => "quiet",
-                .capture => "capture",
-                .promotion => "promotion",
-                .promotionCapture => "promotion capture",
-                .doublePush => "double push",
-                .enpassant => "en passant",
-                .castle => "castle",
-            };
+        moves.clear();
+        movegen.generateKnightMoves(self.board, self.attack_table, &moves, movegen.MoveList.addMoveCallback);
+        printMovesByPiece(&moves);
 
-            std.debug.print("{s}: {c}{c}-{c}{c} ({s})\n", .{
-                pieceType,
-                fromCoords[0],
-                fromCoords[1],
-                toCoords[0],
-                toCoords[1],
-                moveType,
-            });
-        }
+        moves.clear();
+        movegen.generateSlidingMoves(self.board, self.attack_table, &moves, movegen.MoveList.addMoveCallback, true);
+        printMovesByPiece(&moves);
+
+        moves.clear();
+        movegen.generateSlidingMoves(self.board, self.attack_table, &moves, movegen.MoveList.addMoveCallback, false);
+        printMovesByPiece(&moves);
+
+        moves.clear();
+        movegen.generateQueenMoves(self.board, self.attack_table, &moves, movegen.MoveList.addMoveCallback);
+        printMovesByPiece(&moves);
+
+        moves.clear();
+        movegen.generateKingMoves(self.board, self.attack_table, &moves, movegen.MoveList.addMoveCallback);
+        printMovesByPiece(&moves);
     }
 
     /// Counts all possible moves at a given depth
@@ -241,3 +233,38 @@ pub const Perft = struct {
         movegen.generateKingMoves(self.board, self.attack_table, moves, movegen.MoveList.addMoveCallback);
     }
 };
+
+fn printMovesByPiece(moves: *movegen.MoveList) void {
+    for (moves.getMoves()) |move| {
+        const fromCoords = move.from.toCoordinates() catch unreachable;
+        const toCoords = move.to.toCoordinates() catch unreachable;
+
+        const pieceType = switch (move.piece) {
+            .P, .p => "Pawn",
+            .N, .n => "Knight",
+            .B, .b => "Bishop",
+            .R, .r => "Rook",
+            .Q, .q => "Queen",
+            .K, .k => "King",
+        };
+
+        const moveType = switch (move.moveType) {
+            .quiet => "quiet",
+            .capture => "capture",
+            .promotion => "promotion",
+            .promotionCapture => "promotion capture",
+            .doublePush => "double push",
+            .enpassant => "en passant",
+            .castle => "castle",
+        };
+
+        std.debug.print("{s}: {c}{c}-{c}{c} ({s})\n", .{
+            pieceType,
+            fromCoords[0],
+            fromCoords[1],
+            toCoords[0],
+            toCoords[1],
+            moveType,
+        });
+    }
+}

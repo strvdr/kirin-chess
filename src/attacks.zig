@@ -89,33 +89,42 @@ pub const AttackTable = struct {
 
 fn maskPawnAttacks(side: board.Side, square: u6) u64 {
     var attacks: u64 = 0;
-    const bb: u64 = @as(u64, 1) << square;
-    const file = square % 8;
+    var bb: u64 = 0;
+
+    utils.setBit(&bb, square);
 
     switch (side) {
         .white => {
-            if (file == 0) {} else {
-                attacks |= bb << 7;
-            }
-
-            if (file == 7) {} else {
-                attacks |= bb << 9;
-            }
+            if (((bb >> 7) & FileMask.notA) != 0) attacks |= (bb >> 7);
+            if (((bb >> 9) & FileMask.notH) != 0) attacks |= (bb >> 9);
         },
         .black => {
-            if (file == 7) {} else {
-                attacks |= bb >> 7;
-            }
-
-            if (file == 0) {} else {
-                attacks |= bb >> 9;
-            }
+            if (((bb << 7) & FileMask.notH) != 0) attacks |= (bb << 7);
+            if (((bb << 9) & FileMask.notA) != 0) attacks |= (bb << 9);
         },
         .both => {},
     }
 
     return attacks;
 }
+
+//pub fn debugPawnAttacks(side: board.Side, square: u6, attackMask: u64, actualAttacks: u64) void {
+//    // Calculate file the same way (a-h still go left to right)
+//    const file = @as(u8, 'a') + @as(u8, @intCast(square % 8));
+//    // Calculate rank by subtracting from '8' (since rank 8 is now at the top)
+//    const rank = @as(u8, '8') - @as(u8, @intCast(square / 8));
+//
+//    std.debug.print("\n{s} Pawn at square {d} ({c}{c}):\n", .{
+//        if (side == .white) "White" else "Black",
+//        square,
+//        file,
+//        rank,
+//    });
+//    std.debug.print("Attack mask:\n", .{});
+//    utils.printBitboard(attackMask);
+//    std.debug.print("Actual attacks:\n", .{});
+//    utils.printBitboard(actualAttacks);
+//}
 
 fn maskKnightAttacks(square: u6) u64 {
     var attacks: u64 = 0;
@@ -374,10 +383,10 @@ pub fn getRookAttacks(square: u6, occupancy: u64, table: *const AttackTable) u64
 }
 
 pub fn isSquareAttacked(square: u6, side: board.Side, gameBoard: *const board.Board, table: *const AttackTable) bool {
-    const pieceSide = if (side == .white) board.Piece.p else board.Piece.p;
+    const pieceSide = if (side == .white) board.Piece.p else board.Piece.P;
 
     // Pawn attacks
-    if ((table.pawn[@intFromEnum(side.opposite())][square] & gameBoard.bitboard[@intFromEnum(pieceSide)]) != 0) return true;
+    if ((table.pawn[@intFromEnum(side)][square] & gameBoard.bitboard[@intFromEnum(pieceSide)]) != 0) return true;
 
     // Knight attacks
     if ((table.knight[square] & gameBoard.bitboard[@intFromEnum(pieceSide) + 1]) != 0) return true;
