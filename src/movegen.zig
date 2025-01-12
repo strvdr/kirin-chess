@@ -99,7 +99,7 @@ pub const MoveList = struct {
         return .{};
     }
 
-    /// Adds a move to the list. Returns error.OutOfMemory if list is full
+    // Adds a move to the list. Returns error.OutOfMemory if list is full
     pub fn addMove(self: *MoveList, move: Move) !void {
         if (self.count >= self.moves.len) {
             return error.OutOfMemory;
@@ -108,34 +108,34 @@ pub const MoveList = struct {
         self.count += 1;
     }
 
-    /// Removes and returns the last move added. Returns null if list is empty
+    // Removes and returns the last move added. Returns null if list is empty
     pub fn popMove(self: *MoveList) ?Move {
         if (self.count == 0) return null;
         self.count -= 1;
         return self.moves[self.count];
     }
 
-    /// Clears all moves from the list
+    // Clears all moves from the list
     pub fn clear(self: *MoveList) void {
         self.count = 0;
     }
 
-    /// Returns a slice of all moves in the list
+    // Returns a slice of all moves in the list
     pub fn getMoves(self: *const MoveList) []const Move {
         return self.moves[0..self.count];
     }
 
-    /// Returns true if the list contains no moves
+    // Returns true if the list contains no moves
     pub fn isEmpty(self: *const MoveList) bool {
         return self.count == 0;
     }
 
-    /// Returns true if the list is full
+    // Returns true if the list is full
     pub fn isFull(self: *const MoveList) bool {
         return self.count >= self.moves.len;
     }
 
-    /// Print all moves in the list for debugging
+    // Print all moves in the list for debugging
     pub fn print(self: *const MoveList) void {
         std.debug.print("\nMove list ({d} moves):\n", .{self.count});
         for (self.moves[0..self.count], 0..) |move, i| {
@@ -145,7 +145,7 @@ pub const MoveList = struct {
         std.debug.print("\n", .{});
     }
 
-    /// Implements the callback interface used by move generators
+    // Implements the callback interface used by move generators
     pub fn addMoveCallback(ctx: *MoveList, move: Move) void {
         ctx.addMove(move) catch |err| {
             std.debug.print("Failed to add move: {}\n", .{err});
@@ -157,7 +157,7 @@ pub fn generatePawnMoves(
     board: *const bitboard.Board,
     attackTable: *const atk.AttackTable,
     context: anytype,
-    comptime callback: fn (@TypeOf(context), Move) void,
+    callback: fn (@TypeOf(context), Move) void,
 ) void {
     const side = board.sideToMove;
 
@@ -280,7 +280,7 @@ pub fn generateKnightMoves(
     board: *const bitboard.Board,
     attackTable: *const atk.AttackTable,
     context: anytype,
-    comptime callback: fn (@TypeOf(context), Move) void,
+    callback: fn (@TypeOf(context), Move) void,
 ) void {
     const side = board.sideToMove;
     const opponentPieces = board.occupancy[@intFromEnum(side.opposite())];
@@ -346,7 +346,7 @@ pub fn generateKingMoves(
     board: *const bitboard.Board,
     attackTable: *const atk.AttackTable,
     context: anytype,
-    comptime callback: fn (@TypeOf(context), Move) void,
+    callback: fn (@TypeOf(context), Move) void,
 ) void {
     const side = board.sideToMove;
     const opponentPieces = board.occupancy[@intFromEnum(side.opposite())];
@@ -419,18 +419,16 @@ pub fn generateKingMoves(
                         utils.getBit(board.occupancy[2], g1) == 0 and
                         utils.getBit(board.bitboard[@intFromEnum(bitboard.Piece.R)], h1) == 1)
                     {
-                        if (!atk.isSquareAttacked(@intCast(e1), side, board, attackTable)) {
-                            // Check that squares king moves through are not attacked
-                            if (!atk.isSquareAttacked(@intCast(f1), side, board, attackTable) and
-                                !atk.isSquareAttacked(@intCast(g1), side, board, attackTable))
-                            {
-                                callback(context, .{
-                                    .from = .e1,
-                                    .to = .g1,
-                                    .piece = .K,
-                                    .moveType = .castle,
-                                });
-                            }
+                        // Check that squares king moves through are not attacked
+                        if (!atk.isSquareAttacked(@intCast(f1), side, board, attackTable) and
+                            !atk.isSquareAttacked(@intCast(g1), side, board, attackTable))
+                        {
+                            callback(context, .{
+                                .from = .e1,
+                                .to = .g1,
+                                .piece = .K,
+                                .moveType = .castle,
+                            });
                         }
                     }
                 }
@@ -448,19 +446,17 @@ pub fn generateKingMoves(
                         utils.getBit(board.occupancy[2], b1) == 0 and
                         utils.getBit(board.bitboard[@intFromEnum(bitboard.Piece.R)], a1) == 1)
                     {
-                        if (!atk.isSquareAttacked(@intCast(e1), side, board, attackTable)) {
-                            // Check that squares king moves through are not attacked
-                            if (!atk.isSquareAttacked(@intCast(d1), side, board, attackTable) and
-                                !atk.isSquareAttacked(@intCast(c1), side, board, attackTable) and
-                                !atk.isSquareAttacked(@intCast(b1), side, board, attackTable))
-                            {
-                                callback(context, .{
-                                    .from = .e1,
-                                    .to = .c1,
-                                    .piece = .K,
-                                    .moveType = .castle,
-                                });
-                            }
+                        // Check that squares king moves through are not attacked
+                        if (!atk.isSquareAttacked(@intCast(d1), side, board, attackTable) and
+                            !atk.isSquareAttacked(@intCast(c1), side, board, attackTable) and
+                            !atk.isSquareAttacked(@intCast(b1), side, board, attackTable))
+                        {
+                            callback(context, .{
+                                .from = .e1,
+                                .to = .c1,
+                                .piece = .K,
+                                .moveType = .castle,
+                            });
                         }
                     }
                 }
@@ -479,18 +475,16 @@ pub fn generateKingMoves(
                         utils.getBit(board.occupancy[2], g8) == 0 and
                         utils.getBit(board.bitboard[@intFromEnum(bitboard.Piece.r)], h8) == 1)
                     {
-                        if (!atk.isSquareAttacked(@intCast(e8), side, board, attackTable)) {
-                            // Check that squares king moves through are not attacked
-                            if (!atk.isSquareAttacked(@intCast(f8), side, board, attackTable) and
-                                !atk.isSquareAttacked(@intCast(g8), side, board, attackTable))
-                            {
-                                callback(context, .{
-                                    .from = .e8,
-                                    .to = .g8,
-                                    .piece = .k,
-                                    .moveType = .castle,
-                                });
-                            }
+                        // Check that squares king moves through are not attacked
+                        if (!atk.isSquareAttacked(@intCast(f8), side, board, attackTable) and
+                            !atk.isSquareAttacked(@intCast(g8), side, board, attackTable))
+                        {
+                            callback(context, .{
+                                .from = .e8,
+                                .to = .g8,
+                                .piece = .k,
+                                .moveType = .castle,
+                            });
                         }
                     }
                 }
@@ -508,19 +502,17 @@ pub fn generateKingMoves(
                         utils.getBit(board.occupancy[2], b8) == 0 and
                         utils.getBit(board.bitboard[@intFromEnum(bitboard.Piece.r)], a8) == 1)
                     {
-                        if (!atk.isSquareAttacked(@intCast(e8), side, board, attackTable)) {
-                            // Check that squares king moves through are not attacked
-                            if (!atk.isSquareAttacked(@intCast(d8), side, board, attackTable) and
-                                !atk.isSquareAttacked(@intCast(c8), side, board, attackTable) and
-                                !atk.isSquareAttacked(@intCast(b8), side, board, attackTable))
-                            {
-                                callback(context, .{
-                                    .from = .e8,
-                                    .to = .c8,
-                                    .piece = .k,
-                                    .moveType = .castle,
-                                });
-                            }
+                        // Check that squares king moves through are not attacked
+                        if (!atk.isSquareAttacked(@intCast(d8), side, board, attackTable) and
+                            !atk.isSquareAttacked(@intCast(c8), side, board, attackTable) and
+                            !atk.isSquareAttacked(@intCast(b8), side, board, attackTable))
+                        {
+                            callback(context, .{
+                                .from = .e8,
+                                .to = .c8,
+                                .piece = .k,
+                                .moveType = .castle,
+                            });
                         }
                     }
                 }
@@ -535,7 +527,7 @@ pub fn generateSlidingMoves(
     board: *const bitboard.Board,
     attackTable: *const atk.AttackTable,
     context: anytype,
-    comptime callback: fn (@TypeOf(context), Move) void,
+    callback: fn (@TypeOf(context), Move) void,
     is_bishop: bool,
 ) void {
     const side = board.sideToMove;
@@ -611,7 +603,7 @@ pub fn generateQueenMoves(
     board: *const bitboard.Board,
     attackTable: *const atk.AttackTable,
     context: anytype,
-    comptime callback: fn (@TypeOf(context), Move) void,
+    callback: fn (@TypeOf(context), Move) void,
 ) void {
     const side = board.sideToMove;
     const friendlyPieces = board.occupancy[@intFromEnum(side)];

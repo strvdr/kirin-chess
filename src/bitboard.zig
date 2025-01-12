@@ -131,18 +131,6 @@ pub const Piece = enum(u4) {
     pub fn isWhite(self: Piece) bool {
         return @intFromEnum(self) <= @intFromEnum(Piece.K);
     }
-
-    pub fn lowercase(self: Piece) Piece {
-        return switch (self) {
-            .P => .p,
-            .N => .n,
-            .B => .b,
-            .R => .r,
-            .Q => .q,
-            .K => .k,
-            else => self, // Already lowercase
-        };
-    }
 };
 
 pub const Side = enum(u2) {
@@ -173,98 +161,6 @@ pub const CastlingRights = packed struct(u4) {
         };
     }
 };
-
-//                            WHITE PIECES
-//
-//
-//        Pawns                  Knights              Bishops
-//
-//  8  0 0 0 0 0 0 0 0    8  0 0 0 0 0 0 0 0    8  0 0 0 0 0 0 0 0
-//  7  0 0 0 0 0 0 0 0    7  0 0 0 0 0 0 0 0    7  0 0 0 0 0 0 0 0
-//  6  0 0 0 0 0 0 0 0    6  0 0 0 0 0 0 0 0    6  0 0 0 0 0 0 0 0
-//  5  0 0 0 0 0 0 0 0    5  0 0 0 0 0 0 0 0    5  0 0 0 0 0 0 0 0
-//  4  0 0 0 0 0 0 0 0    4  0 0 0 0 0 0 0 0    4  0 0 0 0 0 0 0 0
-//  3  0 0 0 0 0 0 0 0    3  0 0 0 0 0 0 0 0    3  0 0 0 0 0 0 0 0
-//  2  1 1 1 1 1 1 1 1    2  0 0 0 0 0 0 0 0    2  0 0 0 0 0 0 0 0
-//  1  0 0 0 0 0 0 0 0    1  0 1 0 0 0 0 1 0    1  0 0 1 0 0 1 0 0
-//
-//     a b c d e f g h       a b c d e f g h       a b c d e f g h
-//
-//
-//         Rooks                 Queens                 King
-//
-//  8  0 0 0 0 0 0 0 0    8  0 0 0 0 0 0 0 0    8  0 0 0 0 0 0 0 0
-//  7  0 0 0 0 0 0 0 0    7  0 0 0 0 0 0 0 0    7  0 0 0 0 0 0 0 0
-//  6  0 0 0 0 0 0 0 0    6  0 0 0 0 0 0 0 0    6  0 0 0 0 0 0 0 0
-//  5  0 0 0 0 0 0 0 0    5  0 0 0 0 0 0 0 0    5  0 0 0 0 0 0 0 0
-//  4  0 0 0 0 0 0 0 0    4  0 0 0 0 0 0 0 0    4  0 0 0 0 0 0 0 0
-//  3  0 0 0 0 0 0 0 0    3  0 0 0 0 0 0 0 0    3  0 0 0 0 0 0 0 0
-//  2  0 0 0 0 0 0 0 0    2  0 0 0 0 0 0 0 0    2  0 0 0 0 0 0 0 0
-//  1  1 0 0 0 0 0 0 1    1  0 0 0 1 0 0 0 0    1  0 0 0 0 1 0 0 0
-//
-//     a b c d e f g h       a b c d e f g h       a b c d e f g h
-//
-//
-//                            BLACK PIECES
-//
-//
-//        Pawns                  Knights              Bishops
-//
-//  8  0 0 0 0 0 0 0 0    8  0 1 0 0 0 0 1 0    8  0 0 1 0 0 1 0 0
-//  7  1 1 1 1 1 1 1 1    7  0 0 0 0 0 0 0 0    7  0 0 0 0 0 0 0 0
-//  6  0 0 0 0 0 0 0 0    6  0 0 0 0 0 0 0 0    6  0 0 0 0 0 0 0 0
-//  5  0 0 0 0 0 0 0 0    5  0 0 0 0 0 0 0 0    5  0 0 0 0 0 0 0 0
-//  4  0 0 0 0 0 0 0 0    4  0 0 0 0 0 0 0 0    4  0 0 0 0 0 0 0 0
-//  3  0 0 0 0 0 0 0 0    3  0 0 0 0 0 0 0 0    3  0 0 0 0 0 0 0 0
-//  2  0 0 0 0 0 0 0 0    2  0 0 0 0 0 0 0 0    2  0 0 0 0 0 0 0 0
-//  1  0 0 0 0 0 0 0 0    1  0 0 0 0 0 0 0 0    1  0 0 0 0 0 0 0 0
-//
-//     a b c d e f g h       a b c d e f g h       a b c d e f g h
-//
-//
-//         Rooks                 Queens                 King
-//
-//  8  1 0 0 0 0 0 0 1    8  0 0 0 1 0 0 0 0    8  0 0 0 0 1 0 0 0
-//  7  0 0 0 0 0 0 0 0    7  0 0 0 0 0 0 0 0    7  0 0 0 0 0 0 0 0
-//  6  0 0 0 0 0 0 0 0    6  0 0 0 0 0 0 0 0    6  0 0 0 0 0 0 0 0
-//  5  0 0 0 0 0 0 0 0    5  0 0 0 0 0 0 0 0    5  0 0 0 0 0 0 0 0
-//  4  0 0 0 0 0 0 0 0    4  0 0 0 0 0 0 0 0    4  0 0 0 0 0 0 0 0
-//  3  0 0 0 0 0 0 0 0    3  0 0 0 0 0 0 0 0    3  0 0 0 0 0 0 0 0
-//  2  0 0 0 0 0 0 0 0    2  0 0 0 0 0 0 0 0    2  0 0 0 0 0 0 0 0
-//  1  0 0 0 0 0 0 0 0    1  0 0 0 0 0 0 0 0    1  0 0 0 0 0 0 0 0
-//
-//     a b c d e f g h       a b c d e f g h       a b c d e f g h
-//
-//
-//
-//                             OCCUPANCIES
-//
-//
-//     White occupancy       Black occupancy       All occupancies
-//
-//  8  0 0 0 0 0 0 0 0    8  1 1 1 1 1 1 1 1    8  1 1 1 1 1 1 1 1
-//  7  0 0 0 0 0 0 0 0    7  1 1 1 1 1 1 1 1    7  1 1 1 1 1 1 1 1
-//  6  0 0 0 0 0 0 0 0    6  0 0 0 0 0 0 0 0    6  0 0 0 0 0 0 0 0
-//  5  0 0 0 0 0 0 0 0    5  0 0 0 0 0 0 0 0    5  0 0 0 0 0 0 0 0
-//  4  0 0 0 0 0 0 0 0    4  0 0 0 0 0 0 0 0    4  0 0 0 0 0 0 0 0
-//  3  0 0 0 0 0 0 0 0    3  0 0 0 0 0 0 0 0    3  0 0 0 0 0 0 0 0
-//  2  1 1 1 1 1 1 1 1    2  0 0 0 0 0 0 0 0    2  1 1 1 1 1 1 1 1
-//  1  1 1 1 1 1 1 1 1    1  0 0 0 0 0 0 0 0    1  1 1 1 1 1 1 1 1
-//
-//
-//
-//                            ALL TOGETHER
-//
-//                        8  ♜ ♞ ♝ ♛ ♚ ♝ ♞ ♜
-//                        7  ♟︎ ♟︎ ♟︎ ♟︎ ♟︎ ♟︎ ♟︎ ♟︎
-//                        6  . . . . . . . .
-//                        5  . . . . . . . .
-//                        4  . . . . . . . .
-//                        3  . . . . . . . .
-//                        2  ♙ ♙ ♙ ♙ ♙ ♙ ♙ ♙
-//                        1  ♖ ♘ ♗ ♕ ♔ ♗ ♘ ♖
-//
-//                           a b c d e f g h
 
 pub const Board = struct {
     bitboard: [12]u64 = .{0} ** 12,
@@ -314,7 +210,6 @@ pub const Board = struct {
         // Handle different move types
         switch (move.moveType) {
             .quiet => {
-                // Simple piece movement
                 utils.setBit(&self.bitboard[@intFromEnum(move.piece)], @intCast(to));
             },
             .capture => {
@@ -334,7 +229,7 @@ pub const Board = struct {
                 utils.setBit(&self.bitboard[@intFromEnum(move.piece)], @intCast(to));
 
                 // Set en passant square (between source and destination)
-                const epSquare = if (move.piece.isWhite()) from + 8 else from - 8;
+                const epSquare = if (move.piece.isWhite()) @as(u6, @intCast(from - 8)) else @as(u6, @intCast(from + 8));
                 self.enpassant = @enumFromInt(epSquare);
             },
             .enpassant => {
@@ -411,23 +306,19 @@ pub const Board = struct {
             else => {},
         }
 
-        // Switch side to move
+        // Apply it to the actual board, i.e.
+        // Switch side to move and update occupancy bitboards
         self.sideToMove = self.sideToMove.opposite();
-
-        // Update occupancy bitboards
         self.updateOccupancy();
 
+        // Now, see if the move puts the king in check. If it does, restore the original board state.
         const kingBB = if (self.sideToMove == .black) self.bitboard[@intFromEnum(Piece.K)] else self.bitboard[@intFromEnum(Piece.k)];
-
         const kingSquare = @as(u6, @intCast(utils.getLSBindex(kingBB)));
 
         if (attacks.isSquareAttacked(kingSquare, self.sideToMove.opposite(), self, attackTable)) {
             self.* = tmpBoard;
-
             return error.InvalidMove;
         }
-        // If move is valid, apply it to the actual board
-
     }
 
     fn setPiece(self: *Board, piece: Piece, squares: Square) void {

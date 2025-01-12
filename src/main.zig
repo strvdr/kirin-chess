@@ -21,23 +21,23 @@ const movegen = @import("movegen.zig");
 const utils = @import("utils.zig");
 const Perft = @import("perft.zig");
 
-//I think the issue is that we currently store the board state, see if the king is put in check when we make a move,
 pub fn main() !void {
     //const kiwiPeteMod = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/p1N2Q1p/P1PBBPPP/R3K2R w KQkq - 0 1 ";
     var b = board.Board.init();
-    var attack_table: attacks.AttackTable = undefined;
-    attack_table.init();
+    var attackTable: attacks.AttackTable = undefined;
+    attackTable.init();
 
     // Set up position
     try utils.parseFEN(&b, board.Position.kiwiPete);
 
-    var perft = Perft.Perft.init(&b, &attack_table);
+    var perft = Perft.Perft.init(&b, &attackTable);
     perft.debugMoveGeneration();
 
+    const depth = 2;
     // Run perft test
     const timer = Perft.Timer.start();
-    const nodes = perft.perftCount(2);
+    const nodes = perft.perftCount(depth);
     const elapsed = timer.elapsed();
 
-    std.debug.print("Perft(2) found {d} nodes in {d}ms\n", .{ nodes, elapsed });
+    std.debug.print("Perft({d}) found {d} nodes in {d}ms\n", .{ depth, nodes, elapsed });
 }
