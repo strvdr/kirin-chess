@@ -21,12 +21,7 @@ const movegen = @import("movegen.zig");
 const utils = @import("utils.zig");
 const Perft = @import("perft.zig");
 
-// I think the current perft issue lies in how I'm generating attack masks.
-// In my C implementation, I intentionally don't include the board edges
-// in the attack mask so that we don't get wrapping captures (h2 takes a3)
-// but I don't know that I'm accounting for that when making the attack masks.
-// I think we will need to bitwise & the result with a board that only contains the
-// edge squares, and this should fix the problem.
+//I think the issue is that we currently store the board state, see if the king is put in check when we make a move,
 pub fn main() !void {
     //const kiwiPeteMod = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/p1N2Q1p/P1PBBPPP/R3K2R w KQkq - 0 1 ";
     var b = board.Board.init();

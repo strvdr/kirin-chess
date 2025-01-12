@@ -50,6 +50,7 @@ pub const Perft = struct {
             .attack_table = atk,
         };
     }
+
     pub fn debugMoveGeneration(self: *Perft) void {
         var all_moves = movegen.MoveList.init();
 
@@ -90,31 +91,80 @@ pub const Perft = struct {
         printMovesByPiece(&moves);
     }
 
-    /// Counts all possible moves at a given depth
     pub fn perftCount(self: *Perft, depth: u32) u64 {
         if (depth == 0) return 1;
 
         var nodes: u64 = 0;
         var moves = movegen.MoveList.init();
 
+        // For depth 2, keep track of total moves by type
+        var total_quiet_moves: u32 = 0;
+        var total_captures: u32 = 0;
+        var total_castles: u32 = 0;
+        var total_promotions: u32 = 0;
+        var total_en_passants: u32 = 0;
+        var total_double_pushes: u32 = 0;
+
         // Generate all moves for current position
         self.generateAllMoves(&moves);
 
         // Recurse through each move
         for (moves.getMoves()) |move| {
-            // Make move on a copy of the board
-            var board_copy = self.board.*;
-            // Try to make the move, skip if it leaves/puts king in check
-            if (board_copy.makeMove(move, self.attack_table)) |_| {
-                nodes += self.perftCount(depth - 1);
-            } else |_| {
-                // Move was illegal (probably leaves king in check), skip it
+            const saved_board = self.board.*;
+
+            self.board.makeMove(move, self.attack_table) catch {
+                self.board.* = saved_board;
                 continue;
+            };
+
+            if (depth == 2) {
+                // Now analyze moves at this position
+                var reply_moves = movegen.MoveList.init();
+                self.generateAllMoves(&reply_moves);
+
+                // Count moves by type for this position
+                for (reply_moves.getMoves()) |reply| {
+                    switch (reply.moveType) {
+                        .quiet => total_quiet_moves += 1,
+                        .capture => total_captures += 1,
+                        .castle => total_castles += 1,
+                        .promotion, .promotionCapture => total_promotions += 1,
+                        .enpassant => total_en_passants += 1,
+                        .doublePush => total_double_pushes += 1,
+                    }
+                }
+
+                const fromCoords = move.from.toCoordinates() catch continue;
+                const toCoords = move.to.toCoordinates() catch continue;
+
+                std.debug.print("Move {c}{c}-{c}{c} ({s} {s}) generated {d} replies\n", .{
+                    fromCoords[0],        fromCoords[1],
+                    toCoords[0],          toCoords[1],
+                    @tagName(move.piece), @tagName(move.moveType),
+                    reply_moves.count,
+                });
             }
+
+            const subnodes = self.perftCount(depth - 1);
+            nodes += subnodes;
+            self.board.* = saved_board;
+        }
+
+        if (depth == 2) {
+            std.debug.print("\nTotal moves at depth 2:\n", .{});
+            std.debug.print("Quiet moves: {d}\n", .{total_quiet_moves});
+            std.debug.print("Captures: {d}\n", .{total_captures});
+            std.debug.print("Castles: {d}\n", .{total_castles});
+            std.debug.print("Promotions: {d}\n", .{total_promotions});
+            std.debug.print("En passants: {d}\n", .{total_en_passants});
+            std.debug.print("Double pushes: {d}\n", .{total_double_pushes});
+            std.debug.print("Total moves: {d}\n", .{total_quiet_moves + total_captures + total_castles + total_promotions + total_en_passants + total_double_pushes});
+            std.debug.print("Total nodes at depth 2: {d}\n", .{nodes});
         }
 
         return nodes;
     }
+
     // Performs a detailed perft analysis and prints move breakdowns
     pub fn perftDivide(self: *Perft, depth: u32) !PerftResult {
         var total = PerftResult{};
@@ -224,7 +274,6 @@ pub const Perft = struct {
 
     /// Generates all legal moves for the current position
     fn generateAllMoves(self: *Perft, moves: *movegen.MoveList) void {
-        // Generate moves for all piece types
         movegen.generatePawnMoves(self.board, self.attack_table, moves, movegen.MoveList.addMoveCallback);
         movegen.generateKnightMoves(self.board, self.attack_table, moves, movegen.MoveList.addMoveCallback);
         movegen.generateSlidingMoves(self.board, self.attack_table, moves, movegen.MoveList.addMoveCallback, true); // bishops

@@ -21,7 +21,7 @@ const attacks = @import("attacks.zig");
 pub const Position = struct {
     pub const empty = "8/8/8/8/8/8/8/8 w - - ";
     pub const start = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 ";
-    pub const kiwiPete = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1 ";
+    pub const kiwiPete = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -";
     pub const killer = "rnbqkb1r/pp1p1pPp/8/2p1pP2/1P1P4/3P3P/P1P1P3/RNBQKBNR w KQkq e6 0 1 ";
 };
 
@@ -299,37 +299,8 @@ pub const Board = struct {
         self.updateOccupancy();
     }
 
-    fn isKingInCheck(self: *const Board, side: Side, attackTable: *const attacks.AttackTable) bool {
-        // Find king's position
-        const kingBB = if (side == .white)
-            self.bitboard[@intFromEnum(Piece.K)]
-        else
-            self.bitboard[@intFromEnum(Piece.k)];
-
-        if (kingBB == 0) return false;
-
-        const kingSquare = @as(u6, @intCast(utils.getLSBindex(kingBB)));
-        // Pass the attacking side directly rather than calculating opposite twice
-        return attacks.isSquareAttacked(kingSquare, side, self, attackTable); // removed .opposite()
-    }
-
     pub fn makeMove(self: *Board, move: movegen.Move, attackTable: *const attacks.AttackTable) !void {
-        // Make a copy of the current board state
-        var tmpBoard = self.*;
-
-        // Make the move on the temporary board
-        Board.makeMoveUnchecked(&tmpBoard, move);
-
-        // Verify that our king is not in check after the move
-        if (tmpBoard.isKingInCheck(self.sideToMove, attackTable)) {
-            return error.InvalidMove;
-        }
-
-        // If move is valid, apply it to the actual board
-        self.* = tmpBoard;
-    }
-
-    pub fn makeMoveUnchecked(self: *Board, move: movegen.Move) void {
+        const tmpBoard = self.*;
         // Clear the en passant square from the previous move
         self.enpassant = .noSquare;
 
@@ -445,6 +416,18 @@ pub const Board = struct {
 
         // Update occupancy bitboards
         self.updateOccupancy();
+
+        const kingBB = if (self.sideToMove == .black) self.bitboard[@intFromEnum(Piece.K)] else self.bitboard[@intFromEnum(Piece.k)];
+
+        const kingSquare = @as(u6, @intCast(utils.getLSBindex(kingBB)));
+
+        if (attacks.isSquareAttacked(kingSquare, self.sideToMove.opposite(), self, attackTable)) {
+            self.* = tmpBoard;
+
+            return error.InvalidMove;
+        }
+        // If move is valid, apply it to the actual board
+
     }
 
     fn setPiece(self: *Board, piece: Piece, squares: Square) void {

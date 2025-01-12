@@ -419,12 +419,19 @@ pub fn generateKingMoves(
                         utils.getBit(board.occupancy[2], g1) == 0 and
                         utils.getBit(board.bitboard[@intFromEnum(bitboard.Piece.R)], h1) == 1)
                     {
-                        callback(context, .{
-                            .from = .e1,
-                            .to = .g1,
-                            .piece = .K,
-                            .moveType = .castle,
-                        });
+                        if (!atk.isSquareAttacked(@intCast(e1), side, board, attackTable)) {
+                            // Check that squares king moves through are not attacked
+                            if (!atk.isSquareAttacked(@intCast(f1), side, board, attackTable) and
+                                !atk.isSquareAttacked(@intCast(g1), side, board, attackTable))
+                            {
+                                callback(context, .{
+                                    .from = .e1,
+                                    .to = .g1,
+                                    .piece = .K,
+                                    .moveType = .castle,
+                                });
+                            }
+                        }
                     }
                 }
 
@@ -441,12 +448,20 @@ pub fn generateKingMoves(
                         utils.getBit(board.occupancy[2], b1) == 0 and
                         utils.getBit(board.bitboard[@intFromEnum(bitboard.Piece.R)], a1) == 1)
                     {
-                        callback(context, .{
-                            .from = .e1,
-                            .to = .c1,
-                            .piece = .K,
-                            .moveType = .castle,
-                        });
+                        if (!atk.isSquareAttacked(@intCast(e1), side, board, attackTable)) {
+                            // Check that squares king moves through are not attacked
+                            if (!atk.isSquareAttacked(@intCast(d1), side, board, attackTable) and
+                                !atk.isSquareAttacked(@intCast(c1), side, board, attackTable) and
+                                !atk.isSquareAttacked(@intCast(b1), side, board, attackTable))
+                            {
+                                callback(context, .{
+                                    .from = .e1,
+                                    .to = .c1,
+                                    .piece = .K,
+                                    .moveType = .castle,
+                                });
+                            }
+                        }
                     }
                 }
             }
@@ -464,12 +479,19 @@ pub fn generateKingMoves(
                         utils.getBit(board.occupancy[2], g8) == 0 and
                         utils.getBit(board.bitboard[@intFromEnum(bitboard.Piece.r)], h8) == 1)
                     {
-                        callback(context, .{
-                            .from = .e8,
-                            .to = .g8,
-                            .piece = .k,
-                            .moveType = .castle,
-                        });
+                        if (!atk.isSquareAttacked(@intCast(e8), side, board, attackTable)) {
+                            // Check that squares king moves through are not attacked
+                            if (!atk.isSquareAttacked(@intCast(f8), side, board, attackTable) and
+                                !atk.isSquareAttacked(@intCast(g8), side, board, attackTable))
+                            {
+                                callback(context, .{
+                                    .from = .e8,
+                                    .to = .g8,
+                                    .piece = .k,
+                                    .moveType = .castle,
+                                });
+                            }
+                        }
                     }
                 }
 
@@ -486,12 +508,20 @@ pub fn generateKingMoves(
                         utils.getBit(board.occupancy[2], b8) == 0 and
                         utils.getBit(board.bitboard[@intFromEnum(bitboard.Piece.r)], a8) == 1)
                     {
-                        callback(context, .{
-                            .from = .e8,
-                            .to = .c8,
-                            .piece = .k,
-                            .moveType = .castle,
-                        });
+                        if (!atk.isSquareAttacked(@intCast(e8), side, board, attackTable)) {
+                            // Check that squares king moves through are not attacked
+                            if (!atk.isSquareAttacked(@intCast(d8), side, board, attackTable) and
+                                !atk.isSquareAttacked(@intCast(c8), side, board, attackTable) and
+                                !atk.isSquareAttacked(@intCast(b8), side, board, attackTable))
+                            {
+                                callback(context, .{
+                                    .from = .e8,
+                                    .to = .c8,
+                                    .piece = .k,
+                                    .moveType = .castle,
+                                });
+                            }
+                        }
                     }
                 }
             }
@@ -554,7 +584,7 @@ pub fn generateSlidingMoves(
         }
 
         // Then generate quiet moves (moves to empty squares)
-        var quietBB = legalMoves & ~opponentPieces; // Changed from board.occupancy[2]
+        var quietBB = legalMoves & ~opponentPieces;
         while (quietBB != 0) {
             const to = utils.getLSBindex(quietBB);
             if (to < 0) break;
