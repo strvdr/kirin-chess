@@ -104,7 +104,7 @@ pub const Perft = struct {
             const saved_board = self.board.*;
 
             var is_legal: u1 = 1;
-            self.board.makeMove(move, self.attackTable) catch {
+            self.board.makeMove(move) catch {
                 self.board.* = saved_board;
                 is_legal = 0;
             };

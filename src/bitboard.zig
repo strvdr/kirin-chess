@@ -195,8 +195,7 @@ pub const Board = struct {
         self.updateOccupancy();
     }
 
-    pub fn makeMove(self: *Board, move: movegen.Move, attackTable: *const attacks.AttackTable) !void {
-        const tmpBoard = self.*;
+    pub fn makeMove(self: *Board, move: movegen.Move) !void {
         // Clear the en passant square from the previous move
         self.enpassant = .noSquare;
 
@@ -310,15 +309,6 @@ pub const Board = struct {
         // Switch side to move and update occupancy bitboards
         self.sideToMove = self.sideToMove.opposite();
         self.updateOccupancy();
-
-        // Now, see if the move puts the king in check. If it does, restore the original board state.
-        const kingBB = if (self.sideToMove == .black) self.bitboard[@intFromEnum(Piece.K)] else self.bitboard[@intFromEnum(Piece.k)];
-        const kingSquare = @as(u6, @intCast(utils.getLSBindex(kingBB)));
-
-        if (attacks.isSquareAttacked(kingSquare, self.sideToMove.opposite(), self, attackTable)) {
-            self.* = tmpBoard;
-            return error.InvalidMove;
-        }
     }
 
     fn setPiece(self: *Board, piece: Piece, squares: Square) void {

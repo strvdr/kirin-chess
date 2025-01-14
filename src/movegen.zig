@@ -153,8 +153,49 @@ pub const MoveList = struct {
     }
 };
 
+pub fn isMoveLegal(board: *bitboard.Board, move: Move, attackTable: *const atk.AttackTable) bool {
+    // Save the current board state
+    const savedBoard = board.*;
+    var isLegal = false;
+
+    // Attempt to make the move
+    board.makeMove(move) catch {
+        // Restore board and return false if move is invalid
+        board.* = savedBoard;
+        return false;
+    };
+
+    // Find our king
+    const kingBB = if (savedBoard.sideToMove == .white)
+        board.bitboard[@intFromEnum(bitboard.Piece.K)]
+    else
+        board.bitboard[@intFromEnum(bitboard.Piece.k)];
+    const kingSquare = @as(u6, @intCast(utils.getLSBindex(kingBB)));
+
+    // Check if the king is not attacked after the move
+    isLegal = !atk.isSquareAttacked(kingSquare, savedBoard.sideToMove, board, attackTable);
+
+    // Restore the board
+    board.* = savedBoard;
+
+    return isLegal;
+}
+
+// Modified move generation callback wrapper
+pub fn addLegalMove(
+    context: anytype,
+    board: *bitboard.Board,
+    attackTable: *const atk.AttackTable,
+    move: Move,
+    callback: fn (@TypeOf(context), Move) void,
+) void {
+    if (isMoveLegal(board, move, attackTable)) {
+        callback(context, move);
+    }
+}
+
 pub fn generatePawnMoves(
-    board: *const bitboard.Board,
+    board: *bitboard.Board,
     attackTable: *const atk.AttackTable,
     context: anytype,
     callback: fn (@TypeOf(context), Move) void,
@@ -189,22 +230,22 @@ pub fn generatePawnMoves(
                 if (toRank == promotionRank) {
                     // Promotion moves
                     inline for ([_]PromotionPiece{ .queen, .rook, .bishop, .knight }) |promotionPiece| {
-                        callback(context, .{
+                        addLegalMove(context, board, attackTable, .{
                             .from = @as(bitboard.Square, @enumFromInt(fromSquare)),
                             .to = @as(bitboard.Square, @enumFromInt(toSquare)),
                             .piece = if (side == .white) .P else .p,
                             .promotionPiece = promotionPiece,
                             .moveType = .promotion,
-                        });
+                        }, callback);
                     }
                 } else {
                     // Normal push
-                    callback(context, .{
+                    addLegalMove(context, board, attackTable, .{
                         .from = @as(bitboard.Square, @enumFromInt(fromSquare)),
                         .to = @as(bitboard.Square, @enumFromInt(toSquare)),
                         .piece = if (side == .white) .P else .p,
                         .moveType = .quiet,
-                    });
+                    }, callback);
 
                     // Check for double push from starting rank
                     if (fromRank == startingRank) {
@@ -212,12 +253,12 @@ pub fn generatePawnMoves(
                         if (doubleTo >= 0 and doubleTo < 64) {
                             const doubleToSquare = @as(u6, @intCast(doubleTo));
                             if (utils.getBit(board.occupancy[2], doubleToSquare) == 0) {
-                                callback(context, .{
+                                addLegalMove(context, board, attackTable, .{
                                     .from = @as(bitboard.Square, @enumFromInt(fromSquare)),
                                     .to = @as(bitboard.Square, @enumFromInt(doubleToSquare)),
                                     .piece = if (side == .white) .P else .p,
                                     .moveType = .doublePush,
-                                });
+                                }, callback);
                             }
                         }
                     }
@@ -237,22 +278,22 @@ pub fn generatePawnMoves(
 
             if (rank == promotionRank) {
                 inline for ([_]PromotionPiece{ .queen, .rook, .bishop, .knight }) |promotionPiece| {
-                    callback(context, .{
+                    addLegalMove(context, board, attackTable, .{
                         .from = @as(bitboard.Square, @enumFromInt(from)),
                         .to = @as(bitboard.Square, @enumFromInt(toSquare)),
                         .piece = if (side == .white) .P else .p,
                         .promotionPiece = promotionPiece,
                         .moveType = .promotionCapture,
-                    });
+                    }, callback);
                 }
             } else {
                 // Normal captures
-                callback(context, .{
+                addLegalMove(context, board, attackTable, .{
                     .from = @as(bitboard.Square, @enumFromInt(from)),
                     .to = @as(bitboard.Square, @enumFromInt(toSquare)),
                     .piece = if (side == .white) .P else .p,
                     .moveType = .capture,
-                });
+                }, callback);
             }
 
             attackBB &= attackBB - 1; // Clear LSB
@@ -263,12 +304,12 @@ pub fn generatePawnMoves(
             const epAttacks = attackTable.pawn[@intFromEnum(side)][@intCast(from)] &
                 (@as(u64, 1) << @intCast(@intFromEnum(board.enpassant)));
             if (epAttacks != 0) {
-                callback(context, .{
+                addLegalMove(context, board, attackTable, .{
                     .from = @as(bitboard.Square, @enumFromInt(from)),
                     .to = board.enpassant,
                     .piece = if (side == .white) .P else .p,
                     .moveType = .enpassant,
-                });
+                }, callback);
             }
         }
 
@@ -277,7 +318,7 @@ pub fn generatePawnMoves(
 }
 
 pub fn generateKnightMoves(
-    board: *const bitboard.Board,
+    board: *bitboard.Board,
     attackTable: *const atk.AttackTable,
     context: anytype,
     callback: fn (@TypeOf(context), Move) void,
@@ -310,13 +351,12 @@ pub fn generateKnightMoves(
             const to = utils.getLSBindex(capturesBB);
             if (to < 0) break;
             const toSquare = @as(u6, @intCast(to));
-
-            callback(context, .{
+            addLegalMove(context, board, attackTable, .{
                 .from = @as(bitboard.Square, @enumFromInt(fromSquare)),
                 .to = @as(bitboard.Square, @enumFromInt(toSquare)),
                 .piece = if (side == .white) .N else .n,
                 .moveType = .capture,
-            });
+            }, callback);
 
             capturesBB &= capturesBB - 1;
         }
@@ -327,14 +367,12 @@ pub fn generateKnightMoves(
             const to = utils.getLSBindex(quietBB);
             if (to < 0) break;
             const toSquare = @as(u6, @intCast(to));
-
-            callback(context, .{
+            addLegalMove(context, board, attackTable, .{
                 .from = @as(bitboard.Square, @enumFromInt(fromSquare)),
                 .to = @as(bitboard.Square, @enumFromInt(toSquare)),
                 .piece = if (side == .white) .N else .n,
                 .moveType = .quiet,
-            });
-
+            }, callback);
             quietBB &= quietBB - 1;
         }
 
@@ -343,7 +381,7 @@ pub fn generateKnightMoves(
 }
 
 pub fn generateKingMoves(
-    board: *const bitboard.Board,
+    board: *bitboard.Board,
     attackTable: *const atk.AttackTable,
     context: anytype,
     callback: fn (@TypeOf(context), Move) void,
@@ -376,13 +414,12 @@ pub fn generateKingMoves(
             const to = utils.getLSBindex(capturesBB);
             if (to < 0) break;
             const toSquare = @as(u6, @intCast(to));
-
-            callback(context, .{
+            addLegalMove(context, board, attackTable, .{
                 .from = @as(bitboard.Square, @enumFromInt(fromSquare)),
                 .to = @as(bitboard.Square, @enumFromInt(toSquare)),
                 .piece = if (side == .white) .K else .k,
                 .moveType = .capture,
-            });
+            }, callback);
 
             capturesBB &= capturesBB - 1;
         }
@@ -393,13 +430,12 @@ pub fn generateKingMoves(
             const to = utils.getLSBindex(quietBB);
             if (to < 0) break;
             const toSquare = @as(u6, @intCast(to));
-
-            callback(context, .{
+            addLegalMove(context, board, attackTable, .{
                 .from = @as(bitboard.Square, @enumFromInt(fromSquare)),
                 .to = @as(bitboard.Square, @enumFromInt(toSquare)),
                 .piece = if (side == .white) .K else .k,
                 .moveType = .quiet,
-            });
+            }, callback);
 
             quietBB &= quietBB - 1;
         }
@@ -423,12 +459,12 @@ pub fn generateKingMoves(
                         if (!atk.isSquareAttacked(@intCast(f1), side, board, attackTable) and
                             !atk.isSquareAttacked(@intCast(g1), side, board, attackTable))
                         {
-                            callback(context, .{
+                            addLegalMove(context, board, attackTable, .{
                                 .from = .e1,
                                 .to = .g1,
                                 .piece = .K,
                                 .moveType = .castle,
-                            });
+                            }, callback);
                         }
                     }
                 }
@@ -451,12 +487,12 @@ pub fn generateKingMoves(
                             !atk.isSquareAttacked(@intCast(c1), side, board, attackTable) and
                             !atk.isSquareAttacked(@intCast(b1), side, board, attackTable))
                         {
-                            callback(context, .{
+                            addLegalMove(context, board, attackTable, .{
                                 .from = .e1,
                                 .to = .c1,
                                 .piece = .K,
                                 .moveType = .castle,
-                            });
+                            }, callback);
                         }
                     }
                 }
@@ -479,12 +515,12 @@ pub fn generateKingMoves(
                         if (!atk.isSquareAttacked(@intCast(f8), side, board, attackTable) and
                             !atk.isSquareAttacked(@intCast(g8), side, board, attackTable))
                         {
-                            callback(context, .{
+                            addLegalMove(context, board, attackTable, .{
                                 .from = .e8,
                                 .to = .g8,
                                 .piece = .k,
                                 .moveType = .castle,
-                            });
+                            }, callback);
                         }
                     }
                 }
@@ -507,12 +543,12 @@ pub fn generateKingMoves(
                             !atk.isSquareAttacked(@intCast(c8), side, board, attackTable) and
                             !atk.isSquareAttacked(@intCast(b8), side, board, attackTable))
                         {
-                            callback(context, .{
+                            addLegalMove(context, board, attackTable, .{
                                 .from = .e8,
                                 .to = .c8,
                                 .piece = .k,
                                 .moveType = .castle,
-                            });
+                            }, callback);
                         }
                     }
                 }
@@ -524,7 +560,7 @@ pub fn generateKingMoves(
 }
 
 pub fn generateSlidingMoves(
-    board: *const bitboard.Board,
+    board: *bitboard.Board,
     attackTable: *const atk.AttackTable,
     context: anytype,
     callback: fn (@TypeOf(context), Move) void,
@@ -561,8 +597,7 @@ pub fn generateSlidingMoves(
             const to = utils.getLSBindex(capturesBB);
             if (to < 0) break;
             const toSquare = @as(u6, @intCast(to));
-
-            callback(context, .{
+            addLegalMove(context, board, attackTable, .{
                 .from = @as(bitboard.Square, @enumFromInt(fromSquare)),
                 .to = @as(bitboard.Square, @enumFromInt(toSquare)),
                 .piece = if (is_bishop)
@@ -570,8 +605,7 @@ pub fn generateSlidingMoves(
                 else
                     (if (side == .white) .R else .r),
                 .moveType = .capture,
-            });
-
+            }, callback);
             capturesBB &= capturesBB - 1;
         }
 
@@ -581,8 +615,7 @@ pub fn generateSlidingMoves(
             const to = utils.getLSBindex(quietBB);
             if (to < 0) break;
             const toSquare = @as(u6, @intCast(to));
-
-            callback(context, .{
+            addLegalMove(context, board, attackTable, .{
                 .from = @as(bitboard.Square, @enumFromInt(fromSquare)),
                 .to = @as(bitboard.Square, @enumFromInt(toSquare)),
                 .piece = if (is_bishop)
@@ -590,7 +623,7 @@ pub fn generateSlidingMoves(
                 else
                     (if (side == .white) .R else .r),
                 .moveType = .quiet,
-            });
+            }, callback);
 
             quietBB &= quietBB - 1;
         }
@@ -600,7 +633,7 @@ pub fn generateSlidingMoves(
 }
 
 pub fn generateQueenMoves(
-    board: *const bitboard.Board,
+    board: *bitboard.Board,
     attackTable: *const atk.AttackTable,
     context: anytype,
     callback: fn (@TypeOf(context), Move) void,
@@ -635,14 +668,12 @@ pub fn generateQueenMoves(
             const to = utils.getLSBindex(capturesBB);
             if (to < 0) break;
             const toSquare = @as(u6, @intCast(to));
-
-            callback(context, .{
+            addLegalMove(context, board, attackTable, .{
                 .from = @as(bitboard.Square, @enumFromInt(fromSquare)),
                 .to = @as(bitboard.Square, @enumFromInt(toSquare)),
                 .piece = if (side == .white) .Q else .q,
                 .moveType = .capture,
-            });
-
+            }, callback);
             capturesBB &= capturesBB - 1;
         }
 
@@ -652,13 +683,12 @@ pub fn generateQueenMoves(
             const to = utils.getLSBindex(quietBB);
             if (to < 0) break;
             const toSquare = @as(u6, @intCast(to));
-
-            callback(context, .{
+            addLegalMove(context, board, attackTable, .{
                 .from = @as(bitboard.Square, @enumFromInt(fromSquare)),
                 .to = @as(bitboard.Square, @enumFromInt(toSquare)),
                 .piece = if (side == .white) .Q else .q,
                 .moveType = .quiet,
-            });
+            }, callback);
 
             quietBB &= quietBB - 1;
         }
