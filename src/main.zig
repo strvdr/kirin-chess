@@ -31,9 +31,9 @@ pub fn main() !void {
     try utils.parseFEN(&b, board.Position.kiwiPete);
 
     var perft = Perft.Perft.init(&b, &attackTable);
-    perft.debugMoveGeneration();
+    //perft.debugMoveGeneration();
 
-    const depth = 2;
+    const depth = 4;
     // Run perft test
     const timer = Perft.Timer.start();
     const nodes = perft.perftCount(depth);

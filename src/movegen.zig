@@ -42,6 +42,7 @@ pub const Move = packed struct {
     piece: bitboard.Piece,
     promotionPiece: PromotionPiece = .none,
     moveType: MoveType,
+    isCheck: bool = false,
 
     pub fn print(self: Move) void {
         const fromCoords = self.from.toCoordinates() catch return;
@@ -56,35 +57,33 @@ pub const Move = packed struct {
             .K, .k => "king",
         };
 
+        const checkNotation = if (self.isCheck) " +" else "";
+
         switch (self.moveType) {
             .promotion, .promotionCapture => {
                 const promotionChar = bitboard.Piece.toPromotionChar(@as(bitboard.Piece, @enumFromInt(@intFromEnum(self.promotionPiece))));
-                std.debug.print("{s} promotion: {c}{c}{c}{c}{c}\n", .{
+                std.debug.print("{s} promotion: {c}{c}{c}{c}{c}{s}\n", .{
                     piece_name,
                     fromCoords[0],
                     fromCoords[1],
                     toCoords[0],
                     toCoords[1],
                     promotionChar,
+                    checkNotation,
                 });
             },
             .doublePush => {
-                std.debug.print("{s} double push: {c}{c}{c}{c}\n", .{
-                    piece_name,
-                    fromCoords[0],
-                    fromCoords[1],
-                    toCoords[0],
-                    toCoords[1],
-                });
+                std.debug.print("{s} double push: {c}{c}{c}{c}{s}\n", .{ piece_name, fromCoords[0], fromCoords[1], toCoords[0], toCoords[1], checkNotation });
             },
             else => {
-                std.debug.print("{s} {s}: {c}{c}{c}{c}\n", .{
+                std.debug.print("{s} {s}: {c}{c}{c}{c}{s}\n", .{
                     piece_name,
                     if (self.moveType == .capture) "capture" else "move",
                     fromCoords[0],
                     fromCoords[1],
                     toCoords[0],
                     toCoords[1],
+                    checkNotation,
                 });
             },
         }
@@ -157,6 +156,19 @@ pub fn isMoveLegal(board: *bitboard.Board, move: Move, attackTable: *const atk.A
     // Save the current board state
     const savedBoard = board.*;
     var isLegal = false;
+    // Find current king square
+    const initialKingBB = if (savedBoard.sideToMove == .white)
+        board.bitboard[@intFromEnum(bitboard.Piece.K)]
+    else
+        board.bitboard[@intFromEnum(bitboard.Piece.k)];
+    const initialKingSquare = @as(u6, @intCast(utils.getLSBindex(initialKingBB)));
+
+    // Check if king is in check before the move (for castling validation)
+    if (move.moveType == .castle and
+        atk.isSquareAttacked(initialKingSquare, savedBoard.sideToMove, board, attackTable))
+    {
+        return false;
+    }
 
     // Attempt to make the move
     board.makeMove(move) catch {
@@ -190,7 +202,30 @@ pub fn addLegalMove(
     callback: fn (@TypeOf(context), Move) void,
 ) void {
     if (isMoveLegal(board, move, attackTable)) {
-        callback(context, move);
+        // Save board state
+        const savedBoard = board.*;
+
+        // Make the move
+        board.makeMove(move) catch {
+            board.* = savedBoard;
+            return;
+        };
+
+        // Check if move gives check
+        var updatedMove = move;
+        const kingBB = if (savedBoard.sideToMove == .white)
+            board.bitboard[@intFromEnum(bitboard.Piece.k)]
+        else
+            board.bitboard[@intFromEnum(bitboard.Piece.K)];
+        const kingSquare = @as(u6, @intCast(utils.getLSBindex(kingBB)));
+
+        updatedMove.isCheck = atk.isSquareAttacked(kingSquare, savedBoard.sideToMove.opposite(), board, attackTable);
+
+        // Restore board
+        board.* = savedBoard;
+
+        // Add move to list
+        callback(context, updatedMove);
     }
 }
 
@@ -484,8 +519,7 @@ pub fn generateKingMoves(
                     {
                         // Check that squares king moves through are not attacked
                         if (!atk.isSquareAttacked(@intCast(d1), side, board, attackTable) and
-                            !atk.isSquareAttacked(@intCast(c1), side, board, attackTable) and
-                            !atk.isSquareAttacked(@intCast(b1), side, board, attackTable))
+                            !atk.isSquareAttacked(@intCast(c1), side, board, attackTable))
                         {
                             addLegalMove(context, board, attackTable, .{
                                 .from = .e1,
@@ -540,8 +574,7 @@ pub fn generateKingMoves(
                     {
                         // Check that squares king moves through are not attacked
                         if (!atk.isSquareAttacked(@intCast(d8), side, board, attackTable) and
-                            !atk.isSquareAttacked(@intCast(c8), side, board, attackTable) and
-                            !atk.isSquareAttacked(@intCast(b8), side, board, attackTable))
+                            !atk.isSquareAttacked(@intCast(c8), side, board, attackTable))
                         {
                             addLegalMove(context, board, attackTable, .{
                                 .from = .e8,

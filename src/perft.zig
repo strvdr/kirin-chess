@@ -38,6 +38,8 @@ pub const PerftResult = struct {
     castles: u64 = 0,
     promotions: u64 = 0,
     checks: u64 = 0,
+    quiet: u64 = 0,
+    currentMove: ?movegen.Move = null,
 };
 
 pub const Perft = struct {
@@ -91,71 +93,84 @@ pub const Perft = struct {
         printMovesByPiece(&moves);
     }
 
-    fn perftCountInternal(self: *Perft, depth: u32, targetDepth: u32) u64 {
-        if (depth == 0) return 1;
+    fn perftCountInternal(self: *Perft, depth: u32, targetDepth: u32, stats: *PerftResult) u64 {
+        if (depth == 0) {
+            // At a leaf node, classify the current move
+            if (stats.currentMove) |move| {
+                if (move.isCheck) stats.checks += 1;
+
+                switch (move.moveType) {
+                    .capture => stats.captures += 1,
+                    .promotionCapture => {
+                        stats.promotions += 1;
+                        stats.captures += 1;
+                    },
+                    .castle => stats.castles += 1,
+                    .promotion => stats.promotions += 1,
+                    .enpassant => {
+                        stats.en_passants += 1;
+                        stats.captures += 1;
+                    },
+                    .quiet, .doublePush => stats.quiet += 1,
+                }
+            }
+            return 1;
+        }
 
         var nodes: u64 = 0;
         var moves = movegen.MoveList.init();
-        var stats = PerftResult{};
-
         self.generateAllMoves(&moves);
 
         for (moves.getMoves()) |move| {
             const saved_board = self.board.*;
+            const saved_move = stats.currentMove; // Save current move
 
-            var is_legal: u1 = 1;
-            self.board.makeMove(move) catch {
-                self.board.* = saved_board;
-                is_legal = 0;
-            };
+            stats.currentMove = move; // Set current move for this branch
+            self.board.makeMove(move) catch unreachable;
 
-            if (is_legal == 1) {
-                // Collect stats when we're one move away from target depth
-                if (depth == targetDepth - 1) {
-                    var reply_moves = movegen.MoveList.init();
-                    self.generateAllMoves(&reply_moves);
+            // Print move details only at depth 1
+            // if (depth == 1) {
+            //     const fromCoords = move.from.toCoordinates() catch continue;
+            //     const toCoords = move.to.toCoordinates() catch continue;
+            //     std.debug.print("Move {c}{c}-{c}{c} ({s} {s}) generated {d} replies\n", .{
+            //         fromCoords[0],        fromCoords[1],
+            //         toCoords[0],          toCoords[1],
+            //         @tagName(move.piece), @tagName(move.moveType),
+            //         1,
+            //     });
+            // }
 
-                    for (reply_moves.getMoves()) |reply| {
-                        switch (reply.moveType) {
-                            .capture => stats.captures += 1,
-                            .castle => stats.castles += 1,
-                            .promotion, .promotionCapture => stats.promotions += 1,
-                            .enpassant => stats.en_passants += 1,
-                            else => {},
-                        }
-                    }
+            const subnodes = self.perftCountInternal(depth - 1, targetDepth, stats);
+            nodes += subnodes;
 
-                    const fromCoords = move.from.toCoordinates() catch continue;
-                    const toCoords = move.to.toCoordinates() catch continue;
-                    std.debug.print("Move {c}{c}-{c}{c} ({s} {s}) generated {d} replies\n", .{
-                        fromCoords[0],        fromCoords[1],
-                        toCoords[0],          toCoords[1],
-                        @tagName(move.piece), @tagName(move.moveType),
-                        reply_moves.count,
-                    });
-                }
-
-                const subnodes = self.perftCountInternal(depth - 1, targetDepth);
-                nodes += subnodes;
-            }
+            stats.currentMove = saved_move; // Restore previous move
             self.board.* = saved_board;
-        }
-
-        if (depth == targetDepth - 1) {
-            std.debug.print("\nTotal for depth {d}:\n", .{targetDepth});
-            std.debug.print("Captures: {d}\n", .{stats.captures});
-            std.debug.print("En passants: {d}\n", .{stats.en_passants});
-            std.debug.print("Castles: {d}\n", .{stats.castles});
-            std.debug.print("Promotions: {d}\n", .{stats.promotions});
-            std.debug.print("Checks: {d}\n", .{stats.checks});
-            std.debug.print("Total nodes: {d}\n", .{nodes});
         }
 
         return nodes;
     }
 
     pub fn perftCount(self: *Perft, depth: u32) u64 {
-        return self.perftCountInternal(depth, depth + 1);
+        var stats = PerftResult{};
+        const nodes = self.perftCountInternal(depth, depth, &stats);
+
+        // Print stats at the end
+        std.debug.print("\nTotal for depth {d}:\n", .{depth});
+        std.debug.print("Captures: {d}\n", .{stats.captures});
+        std.debug.print("En passants: {d}\n", .{stats.en_passants});
+        std.debug.print("Castles: {d}\n", .{stats.castles});
+        std.debug.print("Promotions: {d}\n", .{stats.promotions});
+        std.debug.print("Checks: {d}\n", .{stats.checks});
+        std.debug.print("Quiet moves: {d}\n", .{stats.quiet});
+        std.debug.print("Total nodes: {d}\n", .{nodes});
+
+        // Validation
+        const total_classified = stats.captures + stats.castles + stats.promotions + stats.quiet;
+        if (total_classified != nodes) {
+            std.debug.print("\nWarning: Move classification mismatch! {d} vs {d}\n", .{ total_classified, nodes });
+        }
+
+        return nodes;
     }
     // Performs a detailed perft analysis and prints move breakdowns
     pub fn perftDivide(self: *Perft, depth: u32) !PerftResult {
