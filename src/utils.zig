@@ -105,7 +105,7 @@ pub fn printBoard(b: *board.Board) void {
         std.debug.print("  {d} ", .{displayRank});
 
         for (0..8) |file| {
-            const square: u6 = @intCast((7 - rank) * 8 + file);
+            const square: u6 = @intCast(rank * 8 + file);
             var pieceFound = false;
 
             // Find piece at current square

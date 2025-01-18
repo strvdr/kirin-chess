@@ -130,10 +130,10 @@ pub const Perft = struct {
 
             // Print move details only at depth 1
             // if (depth == 1) {
-            //     const fromCoords = move.from.toCoordinates() catch continue;
+            //     const sourceCoords = move.source.toCoordinates() catch continue;
             //     const toCoords = move.to.toCoordinates() catch continue;
             //     std.debug.print("Move {c}{c}-{c}{c} ({s} {s}) generated {d} replies\n", .{
-            //         fromCoords[0],        fromCoords[1],
+            //         sourceCoords[0],        sourceCoords[1],
             //         toCoords[0],          toCoords[1],
             //         @tagName(move.piece), @tagName(move.moveType),
             //         1,
@@ -195,11 +195,11 @@ pub const Perft = struct {
                 PerftResult{ .nodes = 1 };
 
             // Print move details
-            const fromCoords = move.from.toCoordinates() catch unreachable;
+            const sourceCoords = move.source.toCoordinates() catch unreachable;
             const toCoords = move.to.toCoordinates() catch unreachable;
             std.debug.print("{c}{c}{c}{c}: {d} nodes", .{
-                fromCoords[0], fromCoords[1],
-                toCoords[0],   toCoords[1],
+                sourceCoords[0], sourceCoords[1],
+                toCoords[0],     toCoords[1],
                 nodes.nodes,
             });
 
@@ -293,8 +293,8 @@ pub const Perft = struct {
 
 fn printMovesByPiece(moves: *movegen.MoveList) void {
     for (moves.getMoves()) |move| {
-        const fromCoords = move.from.toCoordinates() catch unreachable;
-        const toCoords = move.to.toCoordinates() catch unreachable;
+        const sourceCoords = move.source.toCoordinates() catch unreachable;
+        const targetCoords = move.target.toCoordinates() catch unreachable;
 
         const pieceType = switch (move.piece) {
             .P, .p => "Pawn",
@@ -317,10 +317,10 @@ fn printMovesByPiece(moves: *movegen.MoveList) void {
 
         std.debug.print("{s}: {c}{c}-{c}{c} ({s})\n", .{
             pieceType,
-            fromCoords[0],
-            fromCoords[1],
-            toCoords[0],
-            toCoords[1],
+            sourceCoords[0],
+            sourceCoords[1],
+            targetCoords[0],
+            targetCoords[1],
             moveType,
         });
     }

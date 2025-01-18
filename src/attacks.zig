@@ -108,36 +108,18 @@ fn maskPawnAttacks(side: board.Side, square: u6) u64 {
     return attacks;
 }
 
-//pub fn debugPawnAttacks(side: board.Side, square: u6, attackMask: u64, actualAttacks: u64) void {
-//    // Calculate file the same way (a-h still go left to right)
-//    const file = @as(u8, 'a') + @as(u8, @intCast(square % 8));
-//    // Calculate rank by subtracting from '8' (since rank 8 is now at the top)
-//    const rank = @as(u8, '8') - @as(u8, @intCast(square / 8));
-//
-//    std.debug.print("\n{s} Pawn at square {d} ({c}{c}):\n", .{
-//        if (side == .white) "White" else "Black",
-//        square,
-//        file,
-//        rank,
-//    });
-//    std.debug.print("Attack mask:\n", .{});
-//    utils.printBitboard(attackMask);
-//    std.debug.print("Actual attacks:\n", .{});
-//    utils.printBitboard(actualAttacks);
-//}
-
 fn maskKnightAttacks(square: u6) u64 {
     var attacks: u64 = 0;
     const bb: u64 = @as(u64, 1) << square;
 
-    if ((bb >> 17) & FileMask.notH != 0) attacks |= bb >> 17;
-    if ((bb >> 15) & FileMask.notA != 0) attacks |= bb >> 15;
-    if ((bb >> 10) & FileMask.notHG != 0) attacks |= bb >> 10;
-    if ((bb >> 6) & FileMask.notAB != 0) attacks |= bb >> 6;
-    if ((bb << 17) & FileMask.notA != 0) attacks |= bb << 17;
-    if ((bb << 15) & FileMask.notH != 0) attacks |= bb << 15;
-    if ((bb << 10) & FileMask.notAB != 0) attacks |= bb << 10;
-    if ((bb << 6) & FileMask.notHG != 0) attacks |= bb << 6;
+    if ((bb >> 17) & FileMask.notH != 0) attacks |= (bb >> 17);
+    if ((bb >> 15) & FileMask.notA != 0) attacks |= (bb >> 15);
+    if ((bb >> 10) & FileMask.notHG != 0) attacks |= (bb >> 10);
+    if ((bb >> 6) & FileMask.notAB != 0) attacks |= (bb >> 6);
+    if ((bb << 17) & FileMask.notA != 0) attacks |= (bb << 17);
+    if ((bb << 15) & FileMask.notH != 0) attacks |= (bb << 15);
+    if ((bb << 10) & FileMask.notAB != 0) attacks |= (bb << 10);
+    if ((bb << 6) & FileMask.notHG != 0) attacks |= (bb << 6);
 
     return attacks;
 }
@@ -146,14 +128,14 @@ fn maskKingAttacks(square: u6) u64 {
     var attacks: u64 = 0;
     const bb: u64 = @as(u64, 1) << square;
 
-    if (bb >> 8 != 0) attacks |= bb >> 8;
-    if ((bb >> 9) & FileMask.notH != 0) attacks |= bb >> 9;
-    if ((bb >> 7) & FileMask.notA != 0) attacks |= bb >> 7;
-    if ((bb >> 1) & FileMask.notH != 0) attacks |= bb >> 1;
+    if (bb >> 8 != 0) attacks |= (bb >> 8);
+    if ((bb >> 9) & FileMask.notH != 0) attacks |= (bb >> 9);
+    if ((bb >> 7) & FileMask.notA != 0) attacks |= (bb >> 7);
+    if ((bb >> 1) & FileMask.notH != 0) attacks |= (bb >> 1);
     if (bb << 8 != 0) attacks |= bb << 8;
-    if ((bb << 9) & FileMask.notA != 0) attacks |= bb << 9;
-    if ((bb << 7) & FileMask.notH != 0) attacks |= bb << 7;
-    if ((bb << 1) & FileMask.notA != 0) attacks |= bb << 1;
+    if ((bb << 9) & FileMask.notA != 0) attacks |= (bb << 9);
+    if ((bb << 7) & FileMask.notH != 0) attacks |= (bb << 7);
+    if ((bb << 1) & FileMask.notA != 0) attacks |= (bb << 1);
 
     return attacks;
 }
