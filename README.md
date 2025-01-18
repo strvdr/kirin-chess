@@ -11,18 +11,18 @@ The original Kirin Chess Engine was written in C and the source code is availabl
 
 ## Documentation
 
-I write a daily devlog which you can view at [strydr.net](https://strydr.net/articles). These devlogs are meant to serve as a walk through my thought process while building Kirin, as well as a limited form of documentation of the project. 
+I write a weekly devlog which you can view at [strydr.net](https://strydr.net/articles). These devlogs are meant to serve as a walk through my thought process while building Kirin, as well as a limited form of documentation of the project. 
 
-Kirin also has a documentation website, [kirin.strydr.net](https://kirin.strydr.net). This is a great place to start, and I will try and keep it as updated as possible as I build Kirin.
-
+I am also working on a documentation website for Kirin, which will be available at a subdomain to my website in the coming months.
 
 ## Roadmap
 
 - Bitboard board representation ✅
 - Pre-calculated attack tables ✅
 - Magic bitboards ✅
-- Encoding moves as integers
-- Copy/make approach for making moves
+- Encoding moves as a packed struct ✅
+- Copy/make approach for making moves ✅
+- Pseudolegal move generation with immediate legality testing ✅
 - Negamax search with alpha beta pruning
 - PV/killer/history move ordering
 - Iterative deepening
@@ -41,8 +41,11 @@ Kirin also has a documentation website, [kirin.strydr.net](https://kirin.strydr.
 
 ## Acknowledgements
 Thank you greatly to Maksim Korzh, without whom I would not have been able to write Kirin. Also, thank you to the people on the Talk Chess forum and the Chess Programming Wiki for putting together resources used in the creation of Kirin.
+
+Also thank you to Hejsil for suggesting that I change the encoding of moves from an integer to a packed struct. This lead me down a rabbit hole of improvements and modifications. 
+
  - [Maksim Korzh](https://github.com/maksimKorzh)
  - [Talk Chess](https://talkchess.com/)
  - [ChessProgramming Wiki](https://www.chessprogramming.org/Main_Page)
-
+ - [Hejsil](https://github.com/Hejsil)
 
