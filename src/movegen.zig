@@ -64,8 +64,8 @@ pub const Move = packed struct {
     capturedPiece: CapturedPiece = .none,
 
     pub fn print(self: Move) void {
-        const sourceCoords = self.source.targetCoordinates() catch return;
-        const targetCoords = self.target.targetCoordinates() catch return;
+        const sourceCoords = self.source.toCoordinates() catch return;
+        const targetCoords = self.target.toCoordinates() catch return;
 
         const piece_name = switch (self.piece) {
             .P, .p => "pawn",
@@ -80,7 +80,7 @@ pub const Move = packed struct {
 
         switch (self.moveType) {
             .promotion, .promotionCapture => {
-                const promotionChar = bitboard.Piece.targetPromotionChar(@as(bitboard.Piece, @enumFromInt(@intFromEnum(self.promotionPiece))));
+                const promotionChar = bitboard.Piece.toPromotionChar(@as(bitboard.Piece, @enumFromInt(@intFromEnum(self.promotionPiece))));
                 std.debug.print("{s} promotion: {c}{c}{c}{c}{c}{s}\n", .{
                     piece_name,
                     sourceCoords[0],
@@ -126,13 +126,6 @@ pub const MoveList = struct {
         self.count += 1;
     }
 
-    // Removes and returns the last move added. Returns null if list is empty
-    pub fn popMove(self: *MoveList) ?Move {
-        if (self.count == 0) return null;
-        self.count -= 1;
-        return self.moves[self.count];
-    }
-
     // Clears all moves source the list
     pub fn clear(self: *MoveList) void {
         self.count = 0;
@@ -141,16 +134,6 @@ pub const MoveList = struct {
     // Returns a slice of all moves in the list
     pub fn getMoves(self: *const MoveList) []const Move {
         return self.moves[0..self.count];
-    }
-
-    // Returns true if the list contains no moves
-    pub fn isEmpty(self: *const MoveList) bool {
-        return self.count == 0;
-    }
-
-    // Returns true if the list is full
-    pub fn isFull(self: *const MoveList) bool {
-        return self.count >= self.moves.len;
     }
 
     // Print all moves in the list for debugging
@@ -176,37 +159,41 @@ pub fn isMoveLegal(board: *bitboard.Board, move: Move, attackTable: *const atk.A
     const savedBoard = board.*;
     var isLegal = false;
     // Find current king square
-    const initialKingBB = if (savedBoard.sideToMove == .white)
-        board.bitboard[@intFromEnum(bitboard.Piece.K)]
-    else
-        board.bitboard[@intFromEnum(bitboard.Piece.k)];
-    const initialKingSquare = @as(u6, @intCast(utils.getLSBindex(initialKingBB)));
+    const initialKingBB = if (savedBoard.sideToMove == .white) board.bitboard[@intFromEnum(bitboard.Piece.K)] else board.bitboard[@intFromEnum(bitboard.Piece.k)];
+
+    var initialKingSquare: u6 = undefined;
+
+    if (utils.getLSBindex(initialKingBB) == -1) {
+        return false;
+    } else {
+        initialKingSquare = @intCast(utils.getLSBindex(initialKingBB));
+    }
 
     // Check if king is in check before the move (for castling validation)
-    if (move.moveType == .castle and
-        atk.isSquareAttacked(initialKingSquare, savedBoard.sideToMove, board, attackTable))
-    {
+    if (move.moveType == .castle and atk.isSquareAttacked(initialKingSquare, savedBoard.sideToMove, board, attackTable)) {
         return false;
     }
 
-    // Attempt target make the move
+    // Attempt to make the move
     board.makeMove(move) catch {
-        // Restargetre board and return false if move is invalid
+        // Restore board and return false if move is invalid
         board.* = savedBoard;
         return false;
     };
 
     // Find our king
-    const kingBB = if (savedBoard.sideToMove == .white)
-        board.bitboard[@intFromEnum(bitboard.Piece.K)]
-    else
-        board.bitboard[@intFromEnum(bitboard.Piece.k)];
-    const kingSquare = @as(u6, @intCast(utils.getLSBindex(kingBB)));
+    const kingBoard = if (savedBoard.sideToMove == .white) board.bitboard[@intFromEnum(bitboard.Piece.K)] else board.bitboard[@intFromEnum(bitboard.Piece.k)];
+    var kingSquare: u6 = undefined;
+    if (utils.getLSBindex(kingBoard) == -1) {
+        return false;
+    } else {
+        kingSquare = @intCast(utils.getLSBindex(kingBoard));
+    }
 
     // Check if the king is not attacked after the move
     isLegal = !atk.isSquareAttacked(kingSquare, savedBoard.sideToMove, board, attackTable);
 
-    // Restargetre the board
+    // Restore the board
     board.* = savedBoard;
 
     return isLegal;
@@ -225,11 +212,8 @@ pub fn addLegalMove(
         var updatedMove = move;
 
         // Get opponent's king square
-        const kingBB = if (savedBoard.sideToMove == .white)
-            board.bitboard[@intFromEnum(bitboard.Piece.k)]
-        else
-            board.bitboard[@intFromEnum(bitboard.Piece.K)];
-        const kingSquare = @as(u6, @intCast(utils.getLSBindex(kingBB)));
+        const kingBoard = if (savedBoard.sideToMove == .white) board.bitboard[@intFromEnum(bitboard.Piece.k)] else board.bitboard[@intFromEnum(bitboard.Piece.K)];
+        const kingSquare = @as(u6, @intCast(utils.getLSBindex(kingBoard)));
 
         const sourceSquare: u6 = @intCast(@intFromEnum(move.source));
         const discoveryPossible = isDiscoveryCheck(sourceSquare, kingSquare);
@@ -284,54 +268,6 @@ fn isDiscoveryCheck(sourceSquare: u6, kingSquare: u6) bool {
     const onDiagonal = rankDiff == fileDiff;
 
     return onRankOrFile or onDiagonal;
-}
-
-// Fast check if a square is on any possible attacking line to the king
-fn isOnKingRay(square: u6, kingSquare: u6) bool {
-    const srcRank = @divFloor(@as(i8, square), 8);
-    const srcFile = @mod(@as(i8, square), 8);
-    const kingRank = @divFloor(@as(i8, kingSquare), 8);
-    const kingFile = @mod(@as(i8, kingSquare), 8);
-
-    // On same rank or file (rook-like movement)
-    if (srcRank == kingRank or srcFile == kingFile) {
-        return true;
-    }
-
-    // On same diagonal (bishop-like movement)
-    const rankDiff = @abs(kingRank - srcRank);
-    const fileDiff = @abs(kingFile - srcFile);
-    return rankDiff == fileDiff;
-}
-
-pub fn isPathClear(
-    board: *const bitboard.Board,
-    source: u6,
-    target: u6,
-    is_knight: bool,
-) bool {
-    if (is_knight) return true; // Knights can jump over pieces
-
-    const source_rank: i8 = @divFloor(@as(i8, source), 8);
-    const source_file: i8 = @mod(@as(i8, source), 8);
-    const target_rank: i8 = @divFloor(@as(i8, target), 8);
-    const target_file: i8 = @mod(@as(i8, target), 8);
-
-    const rank_step: i8 = if (target_rank > source_rank) 1 else if (target_rank < source_rank) -1 else 0;
-    const file_step: i8 = if (target_file > source_file) 1 else if (target_file < source_file) -1 else 0;
-
-    var current_rank = source_rank + rank_step;
-    var current_file = source_file + file_step;
-
-    while (current_rank != target_rank or current_file != target_file) {
-        const square = @as(u6, @intCast(current_rank * 8 + current_file));
-        if (utils.getBit(board.occupancy[@intFromEnum(board.Side.both)], square) != 0) {
-            return false;
-        }
-        current_rank += rank_step;
-        current_file += file_step;
-    }
-    return true;
 }
 
 pub fn generatePawnMoves(
@@ -537,12 +473,12 @@ pub fn generateKingMoves(
     const opponentPieces = board.occupancy[@intFromEnum(side.opposite())];
 
     // Get king bitboard for current side
-    const kingBB = if (side == .white)
+    const kingBoard = if (side == .white)
         board.bitboard[@intFromEnum(bitboard.Piece.K)]
     else
         board.bitboard[@intFromEnum(bitboard.Piece.k)];
 
-    var boardCopy = kingBB;
+    var boardCopy = kingBoard;
     while (boardCopy != 0) {
         const source = utils.getLSBindex(boardCopy);
         if (source < 0) break;

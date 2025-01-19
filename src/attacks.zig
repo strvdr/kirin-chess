@@ -387,17 +387,3 @@ pub fn isSquareAttacked(square: u6, side: board.Side, gameBoard: *const board.Bo
 
     return false;
 }
-
-pub fn printAttackedSquares(side: board.Side, game_board: *const board.Board, table: *const AttackTable) void {
-    std.debug.print("\n", .{});
-    for (0..8) |rank| {
-        for (0..8) |file| {
-            const square: u6 = @intCast(rank * 8 + file);
-            if (file == 0) std.debug.print("   {d} ", .{8 - rank});
-            const is_attacked = isSquareAttacked(square, side, game_board, table);
-            std.debug.print(" {d}", .{@intFromBool(is_attacked)});
-        }
-        std.debug.print("\n", .{});
-    }
-    std.debug.print("\n     a b c d e f g h\n\n", .{});
-}

@@ -31,7 +31,6 @@ pub fn main() !void {
     try utils.parseFEN(&b, board.Position.kiwiPete);
 
     var perft = Perft.Perft.init(&b, &attackTable);
-    perft.debugMoveGeneration();
 
     const depth = 5;
     // Run perft test

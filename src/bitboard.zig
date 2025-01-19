@@ -174,28 +174,6 @@ pub const Board = struct {
         return .{};
     }
 
-    pub fn initStartPosition(self: *Board) void {
-        self.setPiece(.P, .{ .a2, .b2, .c2, .d2, .e2, .f2, .g2, .h2 });
-        self.setPiece(.N, .{ .b1, .g1 });
-        self.setPiece(.B, .{ .c1, .f1 });
-        self.setPiece(.R, .{ .a1, .h1 });
-        self.setPiece(.Q, .{.d1});
-        self.setPiece(.K, .{.e1});
-
-        // Black pieces
-        self.setPiece(.p, .{ .a7, .b7, .c7, .d7, .e7, .f7, .g7, .h7 });
-        self.setPiece(.n, .{ .b8, .g8 });
-        self.setPiece(.b, .{ .c8, .f8 });
-        self.setPiece(.r, .{ .a8, .h8 });
-        self.setPiece(.q, .{.d8});
-        self.setPiece(.k, .{.e8});
-
-        self.sideToMove = .white;
-        self.enpassant = .noSquare;
-        self.castling = CastlingRights.all();
-        self.updateOccupancy();
-    }
-
     pub fn makeMove(self: *Board, move: movegen.Move) !void {
         // Clear the en passant square source the previous move
         self.enpassant = .noSquare;
@@ -214,10 +192,10 @@ pub const Board = struct {
             },
             .capture => {
                 // Remove captured piece
-                for (&self.bitboard, 0..) |*pieceBB, i| {
+                for (&self.bitboard, 0..) |*pieceBoard, i| {
                     const piece = @as(Piece, @enumFromInt(i));
-                    if (piece.isWhite() != move.piece.isWhite() and utils.getBit(pieceBB.*, @intCast(target)) != 0) {
-                        utils.popBit(pieceBB, @intCast(target));
+                    if (piece.isWhite() != move.piece.isWhite() and utils.getBit(pieceBoard.*, @intCast(target)) != 0) {
+                        utils.popBit(pieceBoard, @intCast(target));
                         break;
                     }
                 }
@@ -247,10 +225,10 @@ pub const Board = struct {
             .promotion, .promotionCapture => {
                 // Handle captures in promotion
                 if (move.moveType == .promotionCapture) {
-                    for (&self.bitboard, 0..) |*pieceBB, i| {
+                    for (&self.bitboard, 0..) |*pieceBoard, i| {
                         const piece = @as(Piece, @enumFromInt(i));
-                        if (piece.isWhite() != move.piece.isWhite() and utils.getBit(pieceBB.*, @intCast(target)) != 0) {
-                            utils.popBit(pieceBB, @intCast(target));
+                        if (piece.isWhite() != move.piece.isWhite() and utils.getBit(pieceBoard.*, @intCast(target)) != 0) {
+                            utils.popBit(pieceBoard, @intCast(target));
                             break;
                         }
                     }
@@ -315,49 +293,23 @@ pub const Board = struct {
         self.updateOccupancy();
     }
 
-    fn setPiece(self: *Board, piece: Piece, squares: Square) void {
-        for (squares) |square| {
-            utils.setBit(&self.bitboard[@intFromEnum(piece)], @intFromEnum(square));
-        }
-    }
-
     pub fn updateOccupancy(self: *Board) void {
         self.occupancy = .{ 0, 0, 0 };
 
         for (0..12) |i| {
             const piece = @as(Piece, @enumFromInt(i));
-            const pieceBB = self.bitboard[i];
+            const pieceBoard = self.bitboard[i];
 
             if (piece.isWhite()) {
-                self.occupancy[@intFromEnum(Side.white)] |= pieceBB;
+                self.occupancy[@intFromEnum(Side.white)] |= pieceBoard;
             } else {
-                self.occupancy[@intFromEnum(Side.black)] |= pieceBB;
+                self.occupancy[@intFromEnum(Side.black)] |= pieceBoard;
             }
         }
 
         self.occupancy[@intFromEnum(Side.both)] = self.occupancy[@intFromEnum(Side.white)] |
             self.occupancy[@intFromEnum(Side.black)];
     }
-};
-
-pub const charPieces = init: {
-    var pieces: [128]u8 = undefined;
-    @memset(&pieces, 0);
-
-    pieces['P'] = @intFromEnum(Piece);
-    pieces['N'] = @intFromEnum(Piece);
-    pieces['B'] = @intFromEnum(Piece);
-    pieces['R'] = @intFromEnum(Piece);
-    pieces['Q'] = @intFromEnum(Piece);
-    pieces['K'] = @intFromEnum(Piece);
-    pieces['p'] = @intFromEnum(Piece);
-    pieces['n'] = @intFromEnum(Piece);
-    pieces['b'] = @intFromEnum(Piece);
-    pieces['r'] = @intFromEnum(Piece);
-    pieces['q'] = @intFromEnum(Piece);
-    pieces['k'] = @intFromEnum(Piece);
-
-    break :init pieces;
 };
 
 pub const Magic = struct {
@@ -499,9 +451,4 @@ pub const Magic = struct {
         0x00001002012800a4, // 62
         0x0000802401008042, // 63
     };
-};
-
-pub const Display = struct {
-    pub const asciiPieces: []const u8 = "PNBRQKpnbrqk";
-    pub const unicodePieces: [12][]const u8 = .{ "♙", "♘", "♗", "♖", "♕", "♔", "♟︎", "♞", "♝", "♜", "♛", "♚" };
 };

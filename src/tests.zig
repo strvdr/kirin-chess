@@ -6,7 +6,121 @@ const utils = @import("utils.zig");
 const Perft = @import("perft.zig");
 const magic = @import("magics.zig");
 
-test "perft regression test - key positions" {
+test "perft regression test - kiwipete position" {
+    var b = board.Board.init();
+    var attack_table: attacks.AttackTable = undefined;
+    attack_table.init();
+
+    // Test structure for known positions
+    const PerftTest = struct {
+        fen: []const u8,
+        depth: u32,
+        expected_nodes: u64,
+    };
+
+    // Known good positions and their node counts
+    const test_positions = [_]PerftTest{
+        .{
+            .fen = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
+            .depth = 1,
+            .expected_nodes = 48,
+        },
+        .{
+            .fen = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
+            .depth = 2,
+            .expected_nodes = 2039,
+        },
+        .{
+            .fen = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
+            .depth = 3,
+            .expected_nodes = 97862,
+        },
+        .{
+            .fen = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
+            .depth = 4,
+            .expected_nodes = 4085603,
+        },
+        .{
+            .fen = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
+            .depth = 5,
+            .expected_nodes = 193690690,
+        },
+    };
+
+    var perft = Perft.Perft.init(&b, &attack_table);
+
+    // Run each test position
+    for (test_positions) |test_pos| {
+        try utils.parseFEN(&b, test_pos.fen);
+        const nodes = perft.perftCount(test_pos.depth);
+
+        // Print detailed info for debugging
+        std.debug.print("\nTesting position: {s}\n", .{test_pos.fen});
+        std.debug.print("Depth: {d}\n", .{test_pos.depth});
+        std.debug.print("Expected nodes: {d}\n", .{test_pos.expected_nodes});
+        std.debug.print("Got nodes: {d}\n", .{nodes});
+
+        try std.testing.expectEqual(test_pos.expected_nodes, nodes);
+    }
+}
+test "perft regression test - cpw position" {
+    var b = board.Board.init();
+    var attack_table: attacks.AttackTable = undefined;
+    attack_table.init();
+
+    // Test structure for known positions
+    const PerftTest = struct {
+        fen: []const u8,
+        depth: u32,
+        expected_nodes: u64,
+    };
+
+    // Known good positions and their node counts
+    const test_positions = [_]PerftTest{
+        .{
+            .fen = "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1",
+            .depth = 1,
+            .expected_nodes = 6,
+        },
+        .{
+            .fen = "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1",
+            .depth = 2,
+            .expected_nodes = 264,
+        },
+        .{
+            .fen = "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1",
+            .depth = 3,
+            .expected_nodes = 9467,
+        },
+        .{
+            .fen = "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1",
+            .depth = 4,
+            .expected_nodes = 422333,
+        },
+        .{
+            .fen = "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1",
+            .depth = 5,
+            .expected_nodes = 15833292,
+        },
+    };
+
+    var perft = Perft.Perft.init(&b, &attack_table);
+
+    // Run each test position
+    for (test_positions) |test_pos| {
+        try utils.parseFEN(&b, test_pos.fen);
+        const nodes = perft.perftCount(test_pos.depth);
+
+        // Print detailed info for debugging
+        std.debug.print("\nTesting position: {s}\n", .{test_pos.fen});
+        std.debug.print("Depth: {d}\n", .{test_pos.depth});
+        std.debug.print("Expected nodes: {d}\n", .{test_pos.expected_nodes});
+        std.debug.print("Got nodes: {d}\n", .{nodes});
+
+        try std.testing.expectEqual(test_pos.expected_nodes, nodes);
+    }
+}
+test "perft regression test - start position" {
     var b = board.Board.init();
     var attack_table: attacks.AttackTable = undefined;
     attack_table.init();
@@ -31,9 +145,19 @@ test "perft regression test - key positions" {
             .expected_nodes = 400,
         },
         .{
-            .fen = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
-            .depth = 2,
-            .expected_nodes = 2039,
+            .fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+            .depth = 3,
+            .expected_nodes = 8902,
+        },
+        .{
+            .fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+            .depth = 4,
+            .expected_nodes = 197281,
+        },
+        .{
+            .fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+            .depth = 5,
+            .expected_nodes = 4865609,
         },
     };
 
@@ -63,13 +187,13 @@ test "perft regression test - key positions" {
 //
 //    // Test a simple pawn move
 //    const move = movegen.Move{
-//        .from = .e2,
-//        .to = .e3,
+//        .source = .e2,
+//        .target = .e3,
 //        .piece = .P,
 //        .moveType = .quiet,
 //    };
 //
-//    try b.makeMove(move, &attackTable);
+//    try b.makeMove(move);
 //
 //    // Verify the move
 //    try std.testing.expectEqual(@as(u1, 0), utils.getBit(b.bitboard[@intFromEnum(board.Piece.P)], @intFromEnum(board.Square.e2)));
@@ -86,13 +210,13 @@ test "perft regression test - key positions" {
 //
 //    // Test a capture
 //    const move = movegen.Move{
-//        .from = .e4,
-//        .to = .d5,
+//        .source = .e4,
+//        .target = .d5,
 //        .piece = .P,
 //        .moveType = .capture,
 //    };
 //
-//    try b.makeMove(move, &attackTable);
+//    try b.makeMove(move);
 //
 //    // Verify the capture
 //    try std.testing.expectEqual(@as(u1, 0), utils.getBit(b.bitboard[@intFromEnum(board.Piece.P)], @intFromEnum(board.Square.e4)));
@@ -101,42 +225,42 @@ test "perft regression test - key positions" {
 //    try std.testing.expect(b.sideToMove == .black);
 //}
 //
-//test "make move - en passant" {
-//    var b = board.Board.init();
-//    var attackTable: attacks.AttackTable = undefined;
-//    attackTable.init();
-//
-//    try utils.parseFEN(&b, "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1");
-//
-//    // Make a black pawn double push
-//    const doublePush = movegen.Move{
-//        .from = .d7,
-//        .to = .d5,
-//        .piece = .p,
-//        .moveType = .doublePush,
-//    };
-//
-//    try b.makeMove(doublePush, &attackTable);
-//
-//    // Verify en passant square is set
-//    try std.testing.expect(b.enpassant == .d6);
-//
-//    // Make the en passant capture
-//    const enPassant = movegen.Move{
-//        .from = .e4,
-//        .to = .d5,
-//        .piece = .P,
-//        .moveType = .enpassant,
-//    };
-//
-//    try b.makeMove(enPassant, &attackTable);
-//
-//    // Verify the en passant capture
-//    try std.testing.expectEqual(@as(u1, 0), utils.getBit(b.bitboard[@intFromEnum(board.Piece.P)], @intFromEnum(board.Square.e4)));
-//    try std.testing.expectEqual(@as(u1, 1), utils.getBit(b.bitboard[@intFromEnum(board.Piece.P)], @intFromEnum(board.Square.d5)));
-//    try std.testing.expectEqual(@as(u1, 0), utils.getBit(b.bitboard[@intFromEnum(board.Piece.p)], @intFromEnum(board.Square.d5)));
-//    try std.testing.expect(b.enpassant == .noSquare);
-//}
+////test "make move - en passant" {
+////    var b = board.Board.init();
+////    var attackTable: attacks.AttackTable = undefined;
+////    attackTable.init();
+////
+////    try utils.parseFEN(&b, "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1");
+////
+////    // Make a black pawn double push
+////    const doublePush = movegen.Move{
+////        .source = .d7,
+////        .target = .d5,
+////        .piece = .p,
+////        .moveType = .doublePush,
+////    };
+////
+////    try b.makeMove(doublePush);
+////
+////    // Verify en passant square is set
+////    try std.testing.expect(b.enpassant == .d6);
+////
+////    // Make the en passant capture
+////    const enPassant = movegen.Move{
+////        .source = .e4,
+////        .target = .d5,
+////        .piece = .P,
+////        .moveType = .enpassant,
+////    };
+////
+////    try b.makeMove(enPassant);
+////
+////    // Verify the en passant capture
+////    try std.testing.expectEqual(@as(u1, 0), utils.getBit(b.bitboard[@intFromEnum(board.Piece.P)], @intFromEnum(board.Square.e4)));
+////    try std.testing.expectEqual(@as(u1, 1), utils.getBit(b.bitboard[@intFromEnum(board.Piece.P)], @intFromEnum(board.Square.d5)));
+////    try std.testing.expectEqual(@as(u1, 0), utils.getBit(b.bitboard[@intFromEnum(board.Piece.p)], @intFromEnum(board.Square.d5)));
+////    try std.testing.expect(b.enpassant == .noSquare);
+////}
 //
 //test "make move - promotion" {
 //    var b = board.Board.init();
@@ -145,16 +269,16 @@ test "perft regression test - key positions" {
 //
 //    try utils.parseFEN(&b, "rnbqkbnr/ppppppPp/8/8/8/8/PPPPPP1P/RNBQKBNR w KQkq - 0 1");
 //
-//    // Test a promotion to queen
+//    // Test a promotion target queen
 //    const move = movegen.Move{
-//        .from = .g7,
-//        .to = .g8,
+//        .source = .g7,
+//        .target = .g8,
 //        .piece = .P,
 //        .promotionPiece = .queen,
 //        .moveType = .promotion,
 //    };
 //
-//    try b.makeMove(move, &attackTable);
+//    try b.makeMove(move);
 //
 //    // Verify the promotion
 //    try std.testing.expectEqual(@as(u1, 0), utils.getBit(b.bitboard[@intFromEnum(board.Piece.P)], @intFromEnum(board.Square.g7)));
@@ -171,13 +295,13 @@ test "perft regression test - key positions" {
 //
 //    // Move the white king
 //    const move = movegen.Move{
-//        .from = .e1,
-//        .to = .e2,
+//        .source = .e1,
+//        .target = .e2,
 //        .piece = .K,
 //        .moveType = .quiet,
 //    };
 //
-//    try b.makeMove(move, &attackTable);
+//    try b.makeMove(move);
 //
 //    // Verify castling rights are updated
 //    try std.testing.expect(!b.castling.whiteKingside);
@@ -194,14 +318,14 @@ test "perft regression test - key positions" {
 //    try utils.parseFEN(&b, "r3k2r/pppppppp/8/8/8/8/PPPPPPPP/R3K2R w KQ-q - 0 1");
 //
 //    const kingsideCastle = movegen.Move{
-//        .from = .e1,
-//        .to = .g1,
+//        .source = .e1,
+//        .target = .g1,
 //        .piece = board.Piece.K,
 //        .moveType = .castle,
 //        .promotionPiece = .none,
 //    };
 //
-//    b.makeMoveUnchecked(kingsideCastle);
+//    try b.makeMove(kingsideCastle);
 //
 //    // Verify positions after kingside castle
 //    try std.testing.expectEqual(@as(u1, 0), utils.getBit(b.bitboard[@intFromEnum(board.Piece.K)], @intFromEnum(board.Square.e1)));
@@ -220,14 +344,14 @@ test "perft regression test - key positions" {
 //    try utils.parseFEN(&b, "r3k2r/pppppppp/8/8/8/8/PPPPPPPP/R3K2R b K-k- - 0 1");
 //
 //    const queensideCastle = movegen.Move{
-//        .from = .e8,
-//        .to = .c8,
+//        .source = .e8,
+//        .target = .c8,
 //        .piece = board.Piece.k,
 //        .moveType = .castle,
 //        .promotionPiece = .none,
 //    };
 //
-//    b.makeMoveUnchecked(queensideCastle);
+//    try b.makeMove(queensideCastle);
 //
 //    // Verify positions after queenside castle
 //    try std.testing.expectEqual(@as(u1, 0), utils.getBit(b.bitboard[@intFromEnum(board.Piece.k)], @intFromEnum(board.Square.e8)));
@@ -252,7 +376,7 @@ test "perft regression test - key positions" {
 //    var attackTable: attacks.AttackTable = undefined;
 //    attackTable.init();
 //
-//    // Structure to count moves
+//    // Structure target count moves
 //    const Context = struct {
 //        count: usize = 0,
 //
@@ -276,33 +400,33 @@ test "perft regression test - key positions" {
 //    try std.testing.expectEqual(@as(usize, 16), context.count);
 //}
 //
-//test "pawn promotion generation" {
-//    var b = board.Board.init();
-//    var attackTable: attacks.AttackTable = undefined;
-//    attackTable.init();
-//
-//    const Context = struct {
-//        count: usize = 0,
-//
-//        fn countMove(self: *@This(), _: movegen.Move) void {
-//            self.count += 1;
-//        }
-//    };
-//
-//    var context = Context{};
-//    const countMoveFn = struct {
-//        fn add(ctx: *Context, move: movegen.Move) void {
-//            ctx.countMove(move);
-//        }
-//    }.add;
-//
-//    // Test a position where a pawn can promote
-//    try utils.parseFEN(&b, "8/P7/8/8/8/8/p7/8 w - - 0 1");
-//    movegen.generatePawnMoves(&b, &attackTable, &context, countMoveFn);
-//
-//    // Each pawn promotion generates 4 moves (queen, rook, bishop, knight)
-//    try std.testing.expectEqual(@as(usize, 4), context.count);
-//}
+////test "pawn promotion generation" {
+////    var b = board.Board.init();
+////    var attackTable: attacks.AttackTable = undefined;
+////    attackTable.init();
+////
+////    const Context = struct {
+////        count: usize = 0,
+////
+////        fn countMove(self: *@This(), _: movegen.Move) void {
+////            self.count += 1;
+////        }
+////    };
+////
+////    var context = Context{};
+////    const countMoveFn = struct {
+////        fn add(ctx: *Context, move: movegen.Move) void {
+////            ctx.countMove(move);
+////        }
+////    }.add;
+////
+////    // Test a position where a pawn can promote
+////    try utils.parseFEN(&b, "8/P7/8/8/8/8/p7/8 w - - 0 1");
+////    movegen.generatePawnMoves(&b, &attackTable, &context, countMoveFn);
+////
+////    // Each pawn promotion generates 4 moves (queen, rook, bishop, knight)
+////    try std.testing.expectEqual(@as(usize, 4), context.count);
+////}
 //
 //test "en passant generation" {
 //    var b = board.Board.init();
@@ -332,33 +456,33 @@ test "perft regression test - key positions" {
 //    try std.testing.expectEqual(@as(usize, 1), context.count);
 //}
 //
-//test "blocked pawn moves" {
-//    var b = board.Board.init();
-//    var attackTable: attacks.AttackTable = undefined;
-//    attackTable.init();
-//
-//    const Context = struct {
-//        count: usize = 0,
-//
-//        fn countMove(self: *@This(), _: movegen.Move) void {
-//            self.count += 1;
-//        }
-//    };
-//
-//    var context = Context{};
-//    const countMoveFn = struct {
-//        fn add(ctx: *Context, move: movegen.Move) void {
-//            ctx.countMove(move);
-//        }
-//    }.add;
-//
-//    // Test a position where pawns are blocked by pieces
-//    try utils.parseFEN(&b, "8/8/8/8/pppppppp/PPPPPPPP/8/8 w - - 0 1");
-//    movegen.generatePawnMoves(&b, &attackTable, &context, countMoveFn);
-//
-//    // No pawn moves should be generated as all pawns are blocked
-//    try std.testing.expectEqual(@as(usize, 12), context.count);
-//}
+////test "blocked pawn moves" {
+////    var b = board.Board.init();
+////    var attackTable: attacks.AttackTable = undefined;
+////    attackTable.init();
+////
+////    const Context = struct {
+////        count: usize = 0,
+////
+////        fn countMove(self: *@This(), _: movegen.Move) void {
+////            self.count += 1;
+////        }
+////    };
+////
+////    var context = Context{};
+////    const countMoveFn = struct {
+////        fn add(ctx: *Context, move: movegen.Move) void {
+////            ctx.countMove(move);
+////        }
+////    }.add;
+////
+////    // Test a position where pawns are blocked by pieces
+////    try utils.parseFEN(&b, "8/8/8/8/pppppppp/PPPPPPPP/8/8 w - - 0 1");
+////    movegen.generatePawnMoves(&b, &attackTable, &context, countMoveFn);
+////
+////    // No pawn moves should be generated as all pawns are blocked
+////    try std.testing.expectEqual(@as(usize, 12), context.count);
+////}
 //
 //test "knight move generation" {
 //    var b = board.Board.init();
@@ -664,7 +788,7 @@ test "perft regression test - key positions" {
 //    // Test position with a queen in the center
 //    try utils.parseFEN(&b, "8/8/8/8/3Q4/8/8/8 w - - 0 1");
 //
-//    // Generate queen moves directly into the move list
+//    // Generate queen moves directly intarget the move list
 //    movegen.generateQueenMoves(&b, &attackTable, &moveList, movegen.MoveList.addMoveCallback);
 //
 //    // Verify moves were added
@@ -696,10 +820,10 @@ test "perft regression test - key positions" {
 //    for (moveList.getMoves()) |move| {
 //        if (move.moveType == .doublePush) {
 //            doublePushes += 1;
-//            std.debug.print("Double push from {s} to {s}\n", .{ @tagName(move.from), @tagName(move.to) });
+//            std.debug.print("Double push source {s} target {s}\n", .{ @tagName(move.source), @tagName(move.target) });
 //        } else if (move.moveType == .quiet) {
 //            singlePushes += 1;
-//            std.debug.print("Single push from {s} to {s}\n", .{ @tagName(move.from), @tagName(move.to) });
+//            std.debug.print("Single push source {s} target {s}\n", .{ @tagName(move.source), @tagName(move.target) });
 //        }
 //    }
 //
@@ -710,7 +834,7 @@ test "perft regression test - key positions" {
 //    try std.testing.expectEqual(@as(usize, 16), moveList.count);
 //}
 //
-//test "generate all moves from initial position" {
+//test "generate all moves source initial position" {
 //    // Initialize board and attack table
 //    var b = board.Board.init();
 //    var attackTable: attacks.AttackTable = undefined;
@@ -719,7 +843,7 @@ test "perft regression test - key positions" {
 //    // Set up initial position
 //    try utils.parseFEN(&b, board.Position.start);
 //
-//    // Create move list to store all moves
+//    // Create move list target stargetre all moves
 //    var moveList = movegen.MoveList.init();
 //
 //    // Generate pawn moves
@@ -783,13 +907,13 @@ test "perft regression test - key positions" {
 //}
 //
 //test "square coordinate conversion" {
-//    // Test bottom left corner (a1)
+//    // Test bottargetm left corner (a1)
 //    const a1 = try board.Square.a1.toCoordinates();
 //    try std.testing.expectEqual(@as(u8, 'a'), a1[0]);
 //    try std.testing.expectEqual(@as(u8, '1'), a1[1]);
 //    std.debug.print("a1 passed", .{});
 //
-//    // Test top right corner (h8)
+//    // Test targetp right corner (h8)
 //    const h8 = try board.Square.h8.toCoordinates();
 //    try std.testing.expectEqual(@as(u8, 'h'), h8[0]);
 //    try std.testing.expectEqual(@as(u8, '8'), h8[1]);
