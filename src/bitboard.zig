@@ -236,10 +236,13 @@ pub const Board = struct {
                 // Place capturing pawn
                 utils.setBit(&self.bitboard[@intFromEnum(move.piece)], @intCast(target));
 
-                // Remove captured pawn - for en passant, the captured pawn is on the same file as 'target'
-                // but on the previous rank for white captures, or next rank for black captures
+                // For en passant, remove the pawn that just double pushed
                 const capturedPiece = if (move.piece.isWhite()) Piece.p else Piece.P;
-                utils.popBit(&self.bitboard[@intFromEnum(capturedPiece)], @intCast(target));
+                const capturedSquare = if (move.piece.isWhite())
+                    target + 8 // White captures black pawn: target square + 8
+                else
+                    target - 8; // Black captures white pawn: target square - 8
+                utils.popBit(&self.bitboard[@intFromEnum(capturedPiece)], @intCast(capturedSquare));
             },
             .promotion, .promotionCapture => {
                 // Handle captures in promotion

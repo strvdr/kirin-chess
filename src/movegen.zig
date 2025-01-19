@@ -221,14 +221,8 @@ pub fn addLegalMove(
     callback: fn (@TypeOf(context), Move) void,
 ) void {
     if (isMoveLegal(board, move, attackTable)) {
-        // Save board state
         const savedBoard = board.*;
-
-        // Make the move
-        board.makeMove(move) catch {
-            board.* = savedBoard;
-            return;
-        };
+        var updatedMove = move;
 
         // Get opponent's king square
         const kingBB = if (savedBoard.sideToMove == .white)
@@ -237,43 +231,77 @@ pub fn addLegalMove(
             board.bitboard[@intFromEnum(bitboard.Piece.K)];
         const kingSquare = @as(u6, @intCast(utils.getLSBindex(kingBB)));
 
-        var updatedMove = move;
+        const sourceSquare: u6 = @intCast(@intFromEnum(move.source));
+        const discoveryPossible = isDiscoveryCheck(sourceSquare, kingSquare);
 
-        // Check if this is a direct check
+        // Make the actual move
+        board.makeMove(move) catch {
+            board.* = savedBoard;
+            return;
+        };
+
+        // Check for direct check
         const directCheck = atk.isSquareAttacked(kingSquare, savedBoard.sideToMove.opposite(), board, attackTable);
 
-        // Check if this is a discovery check
+        // Only check for discovery if it was possible from geometry
         var discoveryCheck = false;
-        if (!directCheck) {
-            // Temporarily remove the moved piece target check for discovered attacks
-            const pieceSquare: u6 = @intCast(@intFromEnum(move.target));
+        if (discoveryPossible) {
+            const targetSquare: u6 = @intCast(@intFromEnum(move.target));
             const pieceBB = &board.bitboard[@intFromEnum(move.piece)];
-            const savedPieceBit = utils.getBit(pieceBB.*, pieceSquare);
-            utils.popBit(pieceBB, pieceSquare);
-
-            // Update occupancy after removing the piece
+            utils.popBit(pieceBB, targetSquare);
             board.updateOccupancy();
 
             discoveryCheck = atk.isSquareAttacked(kingSquare, savedBoard.sideToMove.opposite(), board, attackTable);
 
-            // Restargetre the piece
-            if (savedPieceBit == 1) {
-                utils.setBit(pieceBB, pieceSquare);
-            }
-            // Update occupancy after restargetring the piece
+            utils.setBit(pieceBB, targetSquare);
             board.updateOccupancy();
         }
 
         updatedMove.isCheck = directCheck or discoveryCheck;
-        updatedMove.isDiscoveryCheck = discoveryCheck;
-        updatedMove.isDoubleCheck = directCheck and discoveryCheck;
+        updatedMove.isDiscoveryCheck = discoveryCheck and !directCheck;
 
-        // Restargetre board
+        // Restore board state
         board.* = savedBoard;
-
-        // Add move target list
         callback(context, updatedMove);
     }
+}
+
+fn isDiscoveryCheck(sourceSquare: u6, kingSquare: u6) bool {
+    // A discovery check requires:
+    // 1. Piece moves off line between attacking piece and king
+    // 2. The line becomes clear after move
+    // 3. An attacking piece actually exists on that line
+
+    const srcRank = @divFloor(@as(i8, sourceSquare), 8);
+    const srcFile = @mod(@as(i8, sourceSquare), 8);
+    const kingRank = @divFloor(@as(i8, kingSquare), 8);
+    const kingFile = @mod(@as(i8, kingSquare), 8);
+
+    // Check if on same rank, file, or diagonal
+    const onRankOrFile = (srcRank == kingRank) or (srcFile == kingFile);
+    const rankDiff = @abs(kingRank - srcRank);
+    const fileDiff = @abs(kingFile - srcFile);
+    const onDiagonal = rankDiff == fileDiff;
+
+    return onRankOrFile or onDiagonal;
+}
+
+// Fast check if a square is on any possible attacking line to the king
+fn isOnKingRay(square: u6, kingSquare: u6) bool {
+    const srcRank = @divFloor(@as(i8, square), 8);
+    const srcFile = @mod(@as(i8, square), 8);
+    const kingRank = @divFloor(@as(i8, kingSquare), 8);
+    const kingFile = @mod(@as(i8, kingSquare), 8);
+
+    // On same rank or file (rook-like movement)
+    if (srcRank == kingRank or srcFile == kingFile) {
+        return true;
+    }
+
+    // On same diagonal (bishop-like movement)
+    const rankDiff = @abs(kingRank - srcRank);
+    const fileDiff = @abs(kingFile - srcFile);
+    return rankDiff == fileDiff;
 }
 
 pub fn isPathClear(

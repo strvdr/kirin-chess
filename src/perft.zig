@@ -38,6 +38,9 @@ pub const PerftResult = struct {
     castles: u64 = 0,
     promotions: u64 = 0,
     checks: u64 = 0,
+    discoveryChecks: u64 = 0,
+    doubleChecks: u64 = 0,
+    checkmates: u64 = 0,
     quiet: u64 = 0,
     currentMove: ?movegen.Move = null,
 };
@@ -97,7 +100,34 @@ pub const Perft = struct {
         if (depth == 0) {
             // At a leaf node, classify the current move
             if (stats.currentMove) |move| {
-                if (move.isCheck) stats.checks += 1;
+                if (move.isCheck) {
+                    stats.checks += 1;
+
+                    // Track discovery and double checks
+                    if (move.isDiscoveryCheck) {
+                        stats.discoveryChecks += 1;
+                        stats.checks -= 1;
+                    }
+                    if (move.isDoubleCheck) {
+                        stats.doubleChecks += 1;
+                        stats.checks -= 1;
+                    }
+
+                    // Check for checkmate by trying to generate moves for the opponent
+                    var moves = movegen.MoveList.init();
+                    const savedBoard = self.board.*;
+
+                    // Generate all possible moves for opponent
+                    self.generateAllMoves(&moves);
+
+                    // If no legal moves exist and king is in check, it's checkmate
+                    if (moves.count == 0) {
+                        stats.checkmates += 1;
+                    }
+
+                    // Restore the board
+                    self.board.* = savedBoard;
+                }
 
                 switch (move.moveType) {
                     .capture => stats.captures += 1,
@@ -161,6 +191,9 @@ pub const Perft = struct {
         std.debug.print("Castles: {d}\n", .{stats.castles});
         std.debug.print("Promotions: {d}\n", .{stats.promotions});
         std.debug.print("Checks: {d}\n", .{stats.checks});
+        std.debug.print("Discovery checks: {d}\n", .{stats.discoveryChecks});
+        std.debug.print("Double checks: {d}\n", .{stats.doubleChecks});
+        std.debug.print("Checkmates: {d}\n", .{stats.checkmates});
         std.debug.print("Quiet moves: {d}\n", .{stats.quiet});
         std.debug.print("Total nodes: {d}\n", .{nodes});
 

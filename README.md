@@ -35,6 +35,20 @@ I am also working on a documentation website for Kirin, which will be available 
 - PURE Stockfish NNUE evaluation + 50 move rule penalty
 - UCI protocol
 
+## Usage
+
+Zig is a new programming language that hasn't reached v1.0 at the time of writing this. Because of this, development of the Zig language is constantly ongoing. I currently use the [Zig Nightly AUR package](https://aur.archlinux.org/packages/zig-nightly-bin) which is being consistently updated. There is also a [homebrew](https://github.com/vvvvv/homebrew-zig) version of the nightly bin for Mac users. 
+
+The Zig build system is super robust and easy to use, here are a few commands you can run, with more to be added down the road:
+
+```zig
+zig build            # Build the project
+zig build run        # Run Kirin Chess
+zig build test       # Run tests
+zig build perft      # Run perft tests
+zig build magic      # Generate magic numbers
+```
+
 ## License
 
 [GPL v3](https://www.gnu.org/licenses/gpl-3.0.html)

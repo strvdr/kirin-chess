@@ -132,7 +132,7 @@ fn maskKingAttacks(square: u6) u64 {
     if ((bb >> 9) & FileMask.notH != 0) attacks |= (bb >> 9);
     if ((bb >> 7) & FileMask.notA != 0) attacks |= (bb >> 7);
     if ((bb >> 1) & FileMask.notH != 0) attacks |= (bb >> 1);
-    if (bb << 8 != 0) attacks |= bb << 8;
+    if (bb << 8 != 0) attacks |= (bb << 8);
     if ((bb << 9) & FileMask.notA != 0) attacks |= (bb << 9);
     if ((bb << 7) & FileMask.notH != 0) attacks |= (bb << 7);
     if ((bb << 1) & FileMask.notA != 0) attacks |= (bb << 1);
