@@ -62,7 +62,6 @@ pub const Move = packed struct {
     isDiscoveryCheck: bool = false,
     isDoubleCheck: bool = false,
     capturedPiece: CapturedPiece = .none,
-
     pub fn print(self: Move) void {
         const sourceCoords = self.source.toCoordinates() catch return;
         const targetCoords = self.target.toCoordinates() catch return;
@@ -76,11 +75,17 @@ pub const Move = packed struct {
             .K, .k => "king",
         };
 
-        const checkNotation = if (self.isCheck) " +" else "";
+        const checkNotation = if (self.isCheck) "+" else "";
 
         switch (self.moveType) {
             .promotion, .promotionCapture => {
-                const promotionChar = bitboard.Piece.toPromotionChar(@as(bitboard.Piece, @enumFromInt(@intFromEnum(self.promotionPiece))));
+                const promotionChar: u8 = switch (self.promotionPiece) {
+                    .queen => 'q',
+                    .rook => 'r',
+                    .bishop => 'b',
+                    .knight => 'n',
+                    .none => ' ',
+                };
                 std.debug.print("{s} promotion: {c}{c}{c}{c}{c}{s}\n", .{
                     piece_name,
                     sourceCoords[0],

@@ -20,23 +20,34 @@ const attacks = @import("attacks.zig");
 const movegen = @import("movegen.zig");
 const utils = @import("utils.zig");
 const Perft = @import("perft.zig");
+const uci = @import("uci.zig");
 
 pub fn main() !void {
-    //const testa = "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - ";
-    var b = board.Board.init();
+    // Initialize board and attack table
+    var gameBoard = board.Board.init();
     var attackTable: attacks.AttackTable = undefined;
     attackTable.init();
 
-    // Set up position
-    try utils.parseFEN(&b, board.Position.kiwiPete);
+    // Set up initial position
+    try utils.parseFEN(&gameBoard, board.Position.start);
 
-    var perft = Perft.Perft.init(&b, &attackTable);
+    // Check args without allocation
+    var args = std.process.args();
+    _ = args.skip(); // Skip program name
 
-    const depth = 5;
-    // Run perft test
-    const timer = Perft.Timer.start();
-    const nodes = perft.perftCount(depth);
-    const elapsed = timer.elapsed();
+    if (args.next()) |arg| {
+        if (std.mem.eql(u8, arg, "--perft")) {
+            // Run perft test
+            var perft = Perft.Perft.init(&gameBoard, &attackTable);
+            const depth = 5;
+            const timer = Perft.Timer.start();
+            const nodes = perft.perftCount(depth);
+            const elapsed = timer.elapsed();
+            std.debug.print("Perft({d}) found {d} nodes in {d}ms\n", .{ depth, nodes, elapsed });
+            return;
+        }
+    }
 
-    std.debug.print("Perft({d}) found {d} nodes in {d}ms\n", .{ depth, nodes, elapsed });
+    // Start UCI loop
+    try uci.uciLoop(&gameBoard, &attackTable);
 }
