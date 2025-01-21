@@ -5,6 +5,10 @@ const attacks = @import("attacks.zig");
 const utils = @import("utils.zig");
 const evaluation = @import("evaluation.zig");
 const search = @import("search.zig");
+const transposition = @import("transposition.zig");
+
+pub const ENGINE_NAME = "Kirin Chess";
+pub const ENGINE_AUTHOR = "Strydr Silverberg";
 
 pub const MoveParseError = error{
     InvalidMoveString,
@@ -18,10 +22,6 @@ pub const PositionParseError = error{
     InvalidCommand,
     InvalidFEN,
     InvalidMove,
-};
-
-pub const GoCommand = struct {
-    depth: u8,
 };
 
 pub const GoParseError = error{
@@ -91,46 +91,6 @@ pub fn parseMove(
     return MoveParseError.IllegalMove;
 }
 
-pub const SearchLimits = struct {
-    depth: u8 = 6, // Default depth
-};
-
-pub const SearchError = error{
-    SearchStopped,
-};
-/// Main search function that initiates negamax search
-pub fn startSearch(
-    gameBoard: *bitboard.Board,
-    attackTable: *const attacks.AttackTable,
-    limits: SearchLimits,
-) !search.SearchInfo {
-    var info = search.SearchInfo{
-        .depth = limits.depth,
-    };
-
-    // Iterative deepening
-    var depth: u8 = 1;
-    while (depth <= limits.depth and !info.shouldStop) : (depth += 1) {
-        const score = try search.pvSearch(
-            gameBoard,
-            attackTable,
-            depth,
-            0,
-            -search.INFINITY,
-            search.INFINITY,
-            &info,
-        );
-
-        // Print info and flush
-        const stdout = std.io.getStdOut().writer();
-        try stdout.print(
-            "info depth {d} score cp {d} nodes {d}\n",
-            .{ depth, score, info.nodes },
-        );
-    }
-
-    return info;
-}
 /// Parses UCI "position" command and updates the board state accordingly
 /// Example commands:
 ///   "position startpos"
@@ -224,51 +184,17 @@ fn findMoves(str: []const u8) ?usize {
     return null;
 }
 
-/// Parses UCI "go" command and returns search parameters
-/// Currently supports:
-///   - "go depth N" - search to fixed depth N
-///   - "go" - search to default depth (6)
-pub fn parseGo(command: []const u8) !GoCommand {
-    // Check minimum command length
-    if (command.len < 2 or !std.mem.startsWith(u8, command, "go")) {
-        return GoParseError.InvalidCommand;
-    }
-
-    // Default depth if no depth specified
-    var depth: u8 = 6;
-
-    // Look for depth parameter
-    if (std.mem.indexOf(u8, command, "depth")) |depthIndex| {
-        var numStart = depthIndex + 5;
-        // Skip spaces after "depth"
-        while (numStart < command.len and command[numStart] == ' ') {
-            numStart += 1;
-        }
-
-        if (numStart < command.len) {
-            // Find end of number
-            var numEnd = numStart;
-            while (numEnd < command.len and std.ascii.isDigit(command[numEnd])) {
-                numEnd += 1;
-            }
-
-            // Parse the depth number
-            depth = std.fmt.parseInt(u8, command[numStart..numEnd], 10) catch {
-                return GoParseError.InvalidDepth;
-            };
-        }
-    }
-
-    return GoCommand{ .depth = depth };
-}
-
-pub const ENGINE_NAME = "Kirin Chess";
-pub const ENGINE_AUTHOR = "Strydr Silverberg";
-
 pub fn uciLoop(gameBoard: *bitboard.Board, attackTable: *attacks.AttackTable) !void {
     const stdin = std.io.getStdIn().reader();
     const stdout = std.io.getStdOut().writer();
 
+    // Create transposition table
+    var tt = transposition.TranspositionTable.init();
+    var searchActive = false;
+    var timer = std.time.Timer.start() catch |err| {
+        try stdout.print("info string Error initializing timer: {}\n", .{err});
+        return;
+    };
     // Print engine info
     try stdout.print("id name {s}\n", .{ENGINE_NAME});
     try stdout.print("id author {s}\n", .{ENGINE_AUTHOR});
@@ -306,63 +232,70 @@ pub fn uciLoop(gameBoard: *bitboard.Board, attackTable: *attacks.AttackTable) !v
                 try stdout.print("info string Error resetting position: {}\n", .{err});
                 continue;
             };
+            // Clear transposition table for new game
+            tt.clear();
         } else if (std.mem.startsWith(u8, input, "go")) {
             const params = parseGo(input) catch |err| {
                 try stdout.print("info string Error parsing go command: {}\n", .{err});
                 continue;
             };
 
+            // Calculate appropriate time for this move
+            const moveTime = params.time_control.calculateMoveTime(gameBoard.sideToMove);
+
             // Set up search limits
-            const limits = SearchLimits{
-                .depth = params.depth,
+            const limits = search.SearchLimits{
+                .depth = params.time_control.depth orelse 64,
+                .nodes = params.time_control.nodes,
+                .movetime = if (!params.time_control.infinite) moveTime else null,
             };
 
-            // Perform search
-            const searchInfo = startSearch(gameBoard, attackTable, limits) catch |err| {
+            searchActive = true;
+            timer.reset();
+
+            // After performing the search:
+            const result = search.startSearch(gameBoard, attackTable, &tt, limits) catch |err| {
                 try stdout.print("info string Search error: {}\n", .{err});
                 try stdout.print("bestmove 0000\n", .{});
                 continue;
             };
 
-            // Handle no best move found
-            const bestMove = searchInfo.bestMove orelse {
-                try stdout.print("info string No legal moves available\n", .{});
-                try stdout.print("bestmove 0000\n", .{});
-                continue;
-            };
+            // Now using result.bestMove
+            if (result.bestMove) |best_move| {
+                var moveStr: [5]u8 = undefined;
+                var moveLen: usize = 4;
 
-            // Convert best move to UCI format
-            var moveStr: [5]u8 = undefined;
-            const sourceCoords = bestMove.source.toCoordinates() catch {
-                try stdout.print("bestmove 0000\n", .{});
-                continue;
-            };
-            const targetCoords = bestMove.target.toCoordinates() catch {
-                try stdout.print("bestmove 0000\n", .{});
-                continue;
-            };
-
-            moveStr[0] = sourceCoords[0];
-            moveStr[1] = sourceCoords[1];
-            moveStr[2] = targetCoords[0];
-            moveStr[3] = targetCoords[1];
-
-            var moveLen: usize = 4;
-            if (bestMove.moveType == .promotion or bestMove.moveType == .promotionCapture) {
-                moveStr[4] = switch (bestMove.promotionPiece) {
-                    .queen => 'q',
-                    .rook => 'r',
-                    .bishop => 'b',
-                    .knight => 'n',
-                    .none => unreachable,
+                const sourceCoords = best_move.source.toCoordinates() catch {
+                    try stdout.print("bestmove 0000\n", .{});
+                    continue;
                 };
-                moveLen = 5;
-            }
+                const targetCoords = best_move.target.toCoordinates() catch {
+                    try stdout.print("bestmove 0000\n", .{});
+                    continue;
+                };
 
-            // Send the best move
-            try stdout.print("bestmove ", .{});
-            _ = try stdout.write(moveStr[0..moveLen]);
-            try stdout.print("\n", .{});
+                moveStr[0] = sourceCoords[0];
+                moveStr[1] = sourceCoords[1];
+                moveStr[2] = targetCoords[0];
+                moveStr[3] = targetCoords[1];
+
+                if (best_move.moveType == movegen.MoveType.promotion or best_move.moveType == movegen.MoveType.promotionCapture) {
+                    moveStr[4] = switch (best_move.promotionPiece) {
+                        movegen.PromotionPiece.queen => 'q',
+                        movegen.PromotionPiece.rook => 'r',
+                        movegen.PromotionPiece.bishop => 'b',
+                        movegen.PromotionPiece.knight => 'n',
+                        movegen.PromotionPiece.none => ' ',
+                    };
+                    moveLen = 5;
+                }
+
+                try stdout.print("bestmove ", .{});
+                _ = try stdout.write(moveStr[0..moveLen]);
+                try stdout.print("\n", .{});
+            } else {
+                try stdout.print("bestmove 0000\n", .{});
+            }
         } else if (std.mem.eql(u8, input, "quit")) {
             break;
         } else if (std.mem.eql(u8, input, "uci")) {
@@ -381,4 +314,121 @@ pub fn uciLoop(gameBoard: *bitboard.Board, attackTable: *attacks.AttackTable) !v
             try stdout.print("info string Unknown command: {s}\n", .{input});
         }
     }
+}
+
+pub const TimeControl = struct {
+    wtime: ?u64 = null, // Time left for white in ms
+    btime: ?u64 = null, // Time left for black in ms
+    winc: ?u64 = null, // White increment per move in ms
+    binc: ?u64 = null, // Black increment per move in ms
+    movestogo: ?u32 = null, // Moves until next time control
+    movetime: ?u64 = null, // Exact time to use for this move
+    depth: ?u8 = null, // Maximum depth to search
+    nodes: ?u64 = null, // Maximum nodes to search
+    infinite: bool = false, // Search until "stop" command
+
+    pub fn calculateMoveTime(self: TimeControl, side: bitboard.Side) u64 {
+        // If exact move time is specified, use that
+        if (self.movetime) |mt| {
+            return mt;
+        }
+
+        // Get time and increment for current side
+        const timeLeft = if (side == .white) self.wtime else self.btime;
+        const increment = if (side == .white) self.winc else self.binc;
+
+        if (timeLeft) |time| {
+            var moveTime: u64 = undefined;
+
+            // Basic time management
+            if (self.movestogo) |moves| {
+                // Allocate time evenly among remaining moves
+                moveTime = @max(time / moves, time / 50);
+                if (increment) |inc| {
+                    moveTime +%= inc / 2; // Use some increment, save some
+                }
+            } else {
+                // Estimate we have about 40 moves left
+                moveTime = time / 30;
+                if (increment) |inc| {
+                    moveTime +%= inc / 2;
+                }
+            }
+
+            // Safety margins
+            moveTime = @min(moveTime, time / 4); // Don't use more than 1/4 of remaining time
+            moveTime = @max(moveTime, 10); // Minimum 100ms per move
+            moveTime = @min(moveTime, time - 10); // Leave 50ms buffer
+
+            return moveTime;
+        }
+
+        // Default to 1 second if no time control specified
+        return 100;
+    }
+};
+
+pub const GoCommand = struct {
+    time_control: TimeControl,
+};
+
+pub fn parseGo(command: []const u8) !GoCommand {
+    var tc = TimeControl{};
+    var iter = std.mem.tokenizeAny(u8, command, " ");
+    _ = iter.next(); // Skip "go"
+
+    while (iter.next()) |token| {
+        if (std.mem.eql(u8, token, "infinite")) {
+            tc.infinite = true;
+        } else if (iter.next()) |value| {
+            const num = std.fmt.parseInt(u64, value, 10) catch continue;
+            if (std.mem.eql(u8, token, "wtime")) {
+                tc.wtime = num;
+            } else if (std.mem.eql(u8, token, "btime")) {
+                tc.btime = num;
+            } else if (std.mem.eql(u8, token, "winc")) {
+                tc.winc = num;
+            } else if (std.mem.eql(u8, token, "binc")) {
+                tc.binc = num;
+            } else if (std.mem.eql(u8, token, "movestogo")) {
+                tc.movestogo = @intCast(num);
+            } else if (std.mem.eql(u8, token, "depth")) {
+                tc.depth = @intCast(num);
+            } else if (std.mem.eql(u8, token, "nodes")) {
+                tc.nodes = num;
+            } else if (std.mem.eql(u8, token, "movetime")) {
+                tc.movetime = num;
+            }
+        }
+    }
+
+    return GoCommand{ .time_control = tc };
+}
+
+fn printUciMove(writer: anytype, move: movegen.Move) !void {
+    const sourceCoords = try move.source.toCoordinates();
+    const targetCoords = try move.target.toCoordinates();
+
+    try writer.print("bestmove {c}{c}{c}{c}", .{
+        sourceCoords[0],
+        sourceCoords[1],
+        targetCoords[0],
+        targetCoords[1],
+    });
+
+    // Here we need to use the proper movegen identifiers
+    if (move.moveType == movegen.MoveType.promotion or
+        move.moveType == movegen.MoveType.promotionCapture)
+    {
+        const promo_char = switch (move.promotionPiece) {
+            movegen.PromotionPiece.queen => 'q',
+            movegen.PromotionPiece.rook => 'r',
+            movegen.PromotionPiece.bishop => 'b',
+            movegen.PromotionPiece.knight => 'n',
+            movegen.PromotionPiece.none => unreachable,
+        };
+        try writer.print("{c}", .{promo_char});
+    }
+
+    try writer.print("\n", .{});
 }

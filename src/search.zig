@@ -4,6 +4,7 @@ const movegen = @import("movegen.zig");
 const attacks = @import("attacks.zig");
 const evaluation = @import("evaluation.zig");
 const utils = @import("utils.zig");
+const transposition = @import("transposition.zig");
 
 // Constants for search
 pub const INFINITY: i32 = 50000;
@@ -16,19 +17,8 @@ const RAZOR_MARGIN: i32 = 300;
 const LMR_MIN_DEPTH: u8 = 3;
 const LMR_MIN_MOVES: u8 = 4;
 
-// Transposition table entry types
-const TTEntryType = enum(u2) {
-    exact,
-    alpha,
-    beta,
-};
-
-const TTEntry = struct {
-    key: u64,
-    depth: u8,
-    score: i32,
-    entryType: TTEntryType,
-    bestMove: ?movegen.Move,
+pub const SearchError = error{
+    SearchStopped,
 };
 
 // History heuristic table [piece][square]
@@ -176,13 +166,17 @@ fn givesCheck(gameBoard: *const bitboard.Board, attackTable: *const attacks.Atta
 pub fn pvSearch(
     gameBoard: *bitboard.Board,
     attackTable: *const attacks.AttackTable,
+    tt: *transposition.TranspositionTable,
     depth: u8,
     ply: u8,
     alpha_: i32,
     beta: i32,
     info: *SearchInfo,
+    limits: *const SearchLimits, // Added this parameter
 ) !i32 {
-    if (info.shouldStop) return 0;
+    if ((info.nodes & 1023) == 0 and limits.shouldStop(info)) {
+        return error.SearchTimeout; // Added explicit error
+    }
 
     if (ply >= MAX_PLY - 1) {
         return evaluation.evaluate(gameBoard);
@@ -190,6 +184,7 @@ pub fn pvSearch(
 
     const inCheck = isInCheck(gameBoard, attackTable);
     const isPv = beta - alpha_ > 1;
+    var alpha = alpha_;
 
     var newDepth = depth;
     if (inCheck) {
@@ -202,6 +197,29 @@ pub fn pvSearch(
 
     info.nodes += 1;
 
+    // Generate position key
+    const posKey = generatePositionKey(gameBoard);
+
+    // Probe transposition table
+    var ttMove: ?movegen.Move = null;
+    if (tt.probe(posKey, ply)) |entry| {
+        ttMove = entry.bestMove;
+
+        // Only use TT entries that are valid and have sufficient depth
+        if (entry.depth >= newDepth) {
+            const ttScore = entry.score;
+
+            // Additional validation for score bounds
+            if (ttScore > -INFINITY and ttScore < INFINITY) {
+                switch (entry.entryType) {
+                    .exact => return ttScore,
+                    .alpha => if (ttScore <= alpha) return alpha,
+                    .beta => if (ttScore >= beta) return beta,
+                }
+            }
+        }
+    }
+
     var moveList = movegen.MoveList.init();
     generateAllMoves(gameBoard, attackTable, &moveList);
 
@@ -212,124 +230,128 @@ pub fn pvSearch(
         return 0;
     }
 
-    var alpha = alpha_;
     var bestMove: ?movegen.Move = null;
     var moveCount: u8 = 0;
 
-    scoreMoves(info, moveList.getMovesMut(), ply, bestMove);
+    // Order moves using the TT move
+    scoreMoves(info, moveList.getMovesMut(), ply, ttMove);
     sortMoves(moveList.getMovesMut());
 
     const savedBoard = gameBoard.*;
     const nextPly = if (ply >= MAX_PLY - 2) ply else ply + 1;
 
+    var bestScore = -INFINITY;
+    var entryType = transposition.TTEntryType.alpha;
+
     // Main move loop
     for (moveList.getMovesMut()) |move| {
         moveCount += 1;
 
-        gameBoard.makeMove(move) catch |err| {
-            if (ply == 0) {
-                std.debug.print("Error making move: {any}\n", .{err});
-            }
+        gameBoard.makeMove(move) catch {
             gameBoard.* = savedBoard;
             continue;
         };
 
         var score: i32 = undefined;
-
-        // For very shallow depths, don't use reductions
         var reduction: u8 = 0;
         const searchDepth = if (newDepth > 0) newDepth - 1 else 0;
 
-        if (newDepth >= 2 and !isPv) { // Only try reductions at depth 2+
-            if (moveCount >= LMR_MIN_MOVES and
-                !inCheck and
-                move.moveType != .capture and
-                move.moveType != .promotionCapture)
-            {
+        // LMR and other reductions as before
+        if (newDepth >= 2 and !isPv and !inCheck) {
+            if (moveCount >= LMR_MIN_MOVES and move.moveType != .capture and move.moveType != .promotionCapture) {
                 reduction = if (moveCount >= 6) 1 else 0;
             }
         }
 
-        // Perform the search based on position in move list and reduction
+        // Principal Variation Search
         if (moveCount == 1) {
-            score = -(try pvSearch(
-                gameBoard,
-                attackTable,
-                searchDepth,
-                nextPly,
-                -beta,
-                -alpha,
-                info,
-            ));
+            score = -(try pvSearch(gameBoard, attackTable, tt, searchDepth, nextPly, -beta, -alpha, info, limits));
         } else {
-            // Initial reduced search
-            score = -(try pvSearch(
-                gameBoard,
-                attackTable,
-                searchDepth -| reduction, // Use saturating subtraction
-                nextPly,
-                -(alpha + 1),
-                -alpha,
-                info,
-            ));
+            score = -(try pvSearch(gameBoard, attackTable, tt, searchDepth -| reduction, nextPly, -(alpha + 1), -alpha, info, limits));
 
-            // Re-search at full depth if the reduced search was promising
             if (score > alpha and reduction > 0) {
-                score = -(try pvSearch(
-                    gameBoard,
-                    attackTable,
-                    searchDepth,
-                    nextPly,
-                    -(alpha + 1),
-                    -alpha,
-                    info,
-                ));
+                score = -(try pvSearch(gameBoard, attackTable, tt, searchDepth, nextPly, -(alpha + 1), -alpha, info, limits));
             }
 
-            // PVS full window search if needed
             if (score > alpha and score < beta) {
-                score = -(try pvSearch(
-                    gameBoard,
-                    attackTable,
-                    searchDepth,
-                    nextPly,
-                    -beta,
-                    -alpha,
-                    info,
-                ));
+                score = -(try pvSearch(gameBoard, attackTable, tt, searchDepth, nextPly, -beta, -alpha, info, limits));
             }
         }
 
         gameBoard.* = savedBoard;
+
+        if (score > bestScore) {
+            bestScore = score;
+            bestMove = move;
+
+            if (score > alpha) {
+                alpha = score;
+                entryType = .exact;
+
+                // Update PV table
+                if (ply < MAX_PLY - 1) {
+                    info.pvTable[ply][ply] = move;
+                    var nextPlyPv: u8 = ply + 1;
+                    while (nextPlyPv < info.pvLength[ply + 1] and nextPlyPv < MAX_PLY) : (nextPlyPv += 1) {
+                        info.pvTable[ply][nextPlyPv] = info.pvTable[ply + 1][nextPlyPv];
+                    }
+                    info.pvLength[ply] = info.pvLength[ply + 1];
+                }
+
+                if (ply == 0) {
+                    info.bestMove = move;
+                }
+            }
+        }
 
         if (score >= beta) {
             if (move.moveType != .capture and move.moveType != .promotionCapture) {
                 info.killers.update(move, ply);
                 info.history.update(move.piece, @intCast(@intFromEnum(move.target)), newDepth);
             }
+            tt.store(posKey, newDepth, beta, .beta, bestMove, ply);
             return beta;
-        }
-
-        if (score > alpha) {
-            alpha = score;
-            bestMove = move;
-
-            if (ply < MAX_PLY - 1) {
-                info.pvTable[ply][ply] = move;
-                var nextPlyPv: u8 = ply + 1;
-                while (nextPlyPv < info.pvLength[ply + 1] and nextPlyPv < MAX_PLY) : (nextPlyPv += 1) {
-                    info.pvTable[ply][nextPlyPv] = info.pvTable[ply + 1][nextPlyPv];
-                }
-                info.pvLength[ply] = info.pvLength[ply + 1];
-            }
-
-            if (ply == 0) {
-                info.bestMove = move;
-            }
         }
     }
 
-    return alpha;
+    // Store position in transposition table
+    tt.store(posKey, newDepth, bestScore, entryType, bestMove, ply);
+    return bestScore;
+}
+
+// Generate a unique key for the current position
+fn generatePositionKey(gameBoard: *const bitboard.Board) u64 {
+    var key: u64 = 0;
+
+    // Hash piece positions
+    inline for (gameBoard.bitboard, 0..) |board, piece_idx| {
+        var pieces = board;
+        while (pieces != 0) {
+            const square = utils.getLSBindex(pieces);
+            if (square >= 0) {
+                key ^= transposition.ZobristKeys.pieces[piece_idx][@intCast(square)];
+            }
+            pieces &= pieces - 1;
+        }
+    }
+
+    // Hash side to move
+    if (gameBoard.sideToMove == .black) {
+        key ^= transposition.ZobristKeys.side;
+    }
+
+    // Hash castling rights
+    if (gameBoard.castling.whiteKingside) key ^= transposition.ZobristKeys.castling[0];
+    if (gameBoard.castling.whiteQueenside) key ^= transposition.ZobristKeys.castling[1];
+    if (gameBoard.castling.blackKingside) key ^= transposition.ZobristKeys.castling[2];
+    if (gameBoard.castling.blackQueenside) key ^= transposition.ZobristKeys.castling[3];
+
+    // Hash en passant
+    if (gameBoard.enpassant != .noSquare) {
+        key ^= transposition.ZobristKeys.enpassant[@intFromEnum(gameBoard.enpassant)];
+    }
+
+    return key;
 }
 
 fn printMove(move: movegen.Move) void {
@@ -509,6 +531,155 @@ fn generateCaptures(gameBoard: *bitboard.Board, attackTable: *const attacks.Atta
             pieceBoard &= pieceBoard - 1;
         }
     }
+}
+
+pub const SearchLimits = struct {
+    depth: u8 = 64, // Maximum depth (default to high value)
+    movetime: ?u64 = null, // Time per move in milliseconds
+    nodes: ?u64 = null, // Maximum nodes to search
+    startTime: i128 = 0, // Start time of search
+
+    pub fn shouldStop(self: *const SearchLimits, info: *SearchInfo) bool {
+        // Check node limit
+        if (self.nodes) |maxNodes| {
+            if (info.nodes >= maxNodes) {
+                return true;
+            }
+        }
+
+        // Check time limit
+        if (self.movetime) |maxTime| {
+            const elapsed = std.time.milliTimestamp() - self.startTime;
+            if (elapsed >= maxTime) {
+                return true;
+            }
+        }
+
+        return info.shouldStop;
+    }
+};
+
+pub const SearchResult = struct {
+    bestMove: ?movegen.Move = null,
+    score: i32 = 0,
+    depth: u8 = 0,
+    nodes: u64 = 0,
+};
+
+pub fn startSearch(
+    gameBoard: *bitboard.Board,
+    attackTable: *const attacks.AttackTable,
+    transpositionTable: *transposition.TranspositionTable,
+    limits: SearchLimits,
+) !SearchResult {
+    var info = SearchInfo{};
+    var result = SearchResult{};
+    var limits_with_time = limits;
+    limits_with_time.startTime = std.time.milliTimestamp();
+
+    // Generate moves at root and ensure we have at least one move
+    var moveList = movegen.MoveList.init();
+    generateAllMoves(gameBoard, attackTable, &moveList);
+
+    if (moveList.count > 0) {
+        // Store first legal move as fallback
+        for (moveList.getMoves()) |move| {
+            if (movegen.isMoveLegal(gameBoard, move, attackTable)) {
+                result.bestMove = move;
+                break;
+            }
+        }
+    }
+
+    // Clear old PV
+    @memset(&info.pvLength, 0);
+    @memset(&info.pvTable, undefined);
+
+    // Iterative deepening
+    var iterationDepth: u8 = 1;
+    while (iterationDepth <= limits.depth) : (iterationDepth += 1) {
+        const score = pvSearch(
+            gameBoard,
+            attackTable,
+            transpositionTable,
+            iterationDepth,
+            0,
+            -INFINITY,
+            INFINITY,
+            &info,
+            &limits_with_time,
+        ) catch |err| {
+            std.debug.print("timeout, {}\n", .{err});
+            // If we error out (including timeout), return best move found so far
+            break;
+        };
+
+        // Only update result if we completed the iteration
+        if (!limits_with_time.shouldStop(&info)) {
+            result.bestMove = info.bestMove;
+            result.score = score;
+            result.depth = iterationDepth;
+            result.nodes = info.nodes;
+
+            // Print UCI info
+            try printSearchInfo(&info, score, iterationDepth);
+        } else {
+            break;
+        }
+    }
+
+    return result;
+}
+
+fn printSearchInfo(info: *const SearchInfo, score: i32, depth: u8) !void {
+    const stdout = std.io.getStdOut().writer();
+
+    try stdout.print("info depth {d} score ", .{depth});
+
+    // Print score (handle mate scores specially)
+    if (score > MATE_THRESHOLD) {
+        const movesToMate = @divFloor(MATE_SCORE - score + 1, 2);
+        try stdout.print("mate {d} ", .{movesToMate});
+    } else if (score < -MATE_THRESHOLD) {
+        const movesToMate = @divFloor(MATE_SCORE + score, 2);
+        try stdout.print("mate -{d} ", .{movesToMate});
+    } else {
+        try stdout.print("cp {d} ", .{score});
+    }
+
+    // Print nodes and principal variation
+    try stdout.print("nodes {d}", .{info.nodes});
+
+    // Print PV line if available
+    if (info.pvLength[0] > 0) {
+        try stdout.print(" pv", .{});
+        var i: usize = 0;
+        while (i < info.pvLength[0] and i < MAX_PLY) : (i += 1) {
+            const move = info.pvTable[0][i];
+            const sourceCoords = try move.source.toCoordinates();
+            const targetCoords = try move.target.toCoordinates();
+
+            try stdout.print(" {c}{c}{c}{c}", .{
+                sourceCoords[0],
+                sourceCoords[1],
+                targetCoords[0],
+                targetCoords[1],
+            });
+
+            // Add promotion piece if applicable
+            if (move.moveType == .promotion or move.moveType == .promotionCapture) {
+                switch (move.promotionPiece) {
+                    .queen => try stdout.print("q", .{}),
+                    .rook => try stdout.print("r", .{}),
+                    .bishop => try stdout.print("b", .{}),
+                    .knight => try stdout.print("n", .{}),
+                    .none => {},
+                }
+            }
+        }
+    }
+
+    try stdout.print("\n", .{});
 }
 
 // Move scoring score extraction function

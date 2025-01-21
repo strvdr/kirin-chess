@@ -22,6 +22,37 @@ const utils = @import("utils.zig");
 const Perft = @import("perft.zig");
 const uci = @import("uci.zig");
 
+const Mode = enum {
+    play,
+    debug,
+    perft,
+};
+
+/// For running debug mode, not currently implemented but useful if you want to play
+/// around with Kirin!
+fn runDebugMode(gameBoard: *board.Board) !void {
+    std.debug.print("Debug mode initialized\n", .{});
+
+    utils.printBoard(gameBoard);
+}
+
+/// This is the fun mode. Running play mode allows you to play against Kirin, whether that be in the terminal,
+/// connecting to a GUI, or even running it on Lichess!
+fn runPlayMode(gameBoard: *board.Board, attackTable: *attacks.AttackTable) !void {
+    try uci.uciLoop(gameBoard, attackTable);
+}
+
+/// Perft mode is to evaluate performance. This mode lets us easily run perft tests without messing up
+/// any engine functions!
+fn runPerftMode(gameBoard: *board.Board, attackTable: *attacks.AttackTable) !void {
+    var perft = Perft.Perft.init(gameBoard, attackTable);
+    const depth = 6;
+    const timer = Perft.Timer.start();
+    const nodes = perft.perftCount(depth);
+    const elapsed = timer.elapsed();
+    std.debug.print("Perft({d}) found {d} nodes in {d}ms\n", .{ depth, nodes, elapsed });
+}
+
 pub fn main() !void {
     // Initialize board and attack table
     var gameBoard = board.Board.init();
@@ -31,23 +62,28 @@ pub fn main() !void {
     // Set up initial position
     try utils.parseFEN(&gameBoard, board.Position.start);
 
-    // Check args without allocation
+    // Parse command line arguments
     var args = std.process.args();
     _ = args.skip(); // Skip program name
 
+    // Default to play mode if no arguments
+    var mode: Mode = .play;
+
     if (args.next()) |arg| {
-        if (std.mem.eql(u8, arg, "--perft")) {
-            // Run perft test
-            var perft = Perft.Perft.init(&gameBoard, &attackTable);
-            const depth = 5;
-            const timer = Perft.Timer.start();
-            const nodes = perft.perftCount(depth);
-            const elapsed = timer.elapsed();
-            std.debug.print("Perft({d}) found {d} nodes in {d}ms\n", .{ depth, nodes, elapsed });
-            return;
-        }
+        mode = if (std.mem.eql(u8, arg, "--debug"))
+            .debug
+        else if (std.mem.eql(u8, arg, "--perft"))
+            .perft
+        else if (std.mem.eql(u8, arg, "--play"))
+            .play
+        else
+            .play;
     }
 
-    // Start UCI loop
-    try uci.uciLoop(&gameBoard, &attackTable);
+    // Run the appropriate mode
+    switch (mode) {
+        .play => try runPlayMode(&gameBoard, &attackTable),
+        .debug => try runDebugMode(&gameBoard),
+        .perft => try runPerftMode(&gameBoard, &attackTable),
+    }
 }

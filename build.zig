@@ -17,6 +17,9 @@ pub fn build(b: *std.Build) void {
         .root_module = exe_mod,
     });
 
+    // Set stack size to 256MB (adjust as needed)
+    exe.stack_size = 256 * 1024 * 1024;
+
     // Install the executable
     b.installArtifact(exe);
 
