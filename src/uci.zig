@@ -108,15 +108,9 @@ pub fn startSearch(
         .depth = limits.depth,
     };
 
-    const stdout = std.io.getStdOut().writer();
-
-    try stdout.print("Starting search to depth {d}\n", .{limits.depth});
-
     // Iterative deepening
     var depth: u8 = 1;
     while (depth <= limits.depth and !info.shouldStop) : (depth += 1) {
-        try stdout.print("Searching depth {d}...\n", .{depth});
-
         const score = try search.pvSearch(
             gameBoard,
             attackTable,
@@ -124,20 +118,16 @@ pub fn startSearch(
             0,
             -search.INFINITY,
             search.INFINITY,
-            true,
             &info,
         );
 
         // Print info and flush
+        const stdout = std.io.getStdOut().writer();
         try stdout.print(
             "info depth {d} score cp {d} nodes {d}\n",
             .{ depth, score, info.nodes },
         );
-        //try std.io.getStdOut().flush();
     }
-
-    try stdout.print("Search completed\n", .{});
-    //try std.io.getStdOut().flush();
 
     return info;
 }

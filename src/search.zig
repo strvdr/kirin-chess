@@ -180,56 +180,35 @@ pub fn pvSearch(
     ply: u8,
     alpha_: i32,
     beta: i32,
-    canNull: bool,
     info: *SearchInfo,
 ) !i32 {
-    if (ply == 0) {
-        std.debug.print("Search params - depth: {d}, ply: {d}, alpha: {d}, beta: {d}, canNull: {}\n", .{ depth, ply, alpha_, beta, canNull });
-    }
-
     if (info.shouldStop) return 0;
 
     if (ply >= MAX_PLY - 1) {
-        if (ply == 0) std.debug.print("Hit max ply\n", .{});
         return evaluation.evaluate(gameBoard);
     }
 
     const inCheck = isInCheck(gameBoard, attackTable);
     const isPv = beta - alpha_ > 1;
 
-    if (ply == 0) {
-        std.debug.print("Position info - inCheck: {}, isPv: {}\n", .{ inCheck, isPv });
-    }
-
     var newDepth = depth;
     if (inCheck) {
         newDepth += 1;
-        if (ply == 0) std.debug.print("Extending depth due to check. New depth: {d}\n", .{newDepth});
     }
 
     if (newDepth == 0) {
-        if (ply == 0) std.debug.print("Starting quiescence search\n", .{});
         return quiescence(gameBoard, attackTable, alpha_, beta, info);
     }
 
     info.nodes += 1;
-    if (info.nodes % 10000 == 0 and ply == 0) {
-        std.debug.print("Nodes searched: {d}\n", .{info.nodes});
-    }
-
-    if (ply == 0) std.debug.print("Generating moves...\n", .{});
 
     var moveList = movegen.MoveList.init();
     generateAllMoves(gameBoard, attackTable, &moveList);
 
-    if (ply == 0) std.debug.print("Generated {d} moves\n", .{moveList.count});
-
     if (moveList.count == 0) {
         if (inCheck) {
-            if (ply == 0) std.debug.print("Checkmate\n", .{});
             return -MATE_SCORE + @as(i32, ply);
         }
-        if (ply == 0) std.debug.print("Stalemate\n", .{});
         return 0;
     }
 
@@ -246,12 +225,6 @@ pub fn pvSearch(
     // Main move loop
     for (moveList.getMovesMut()) |move| {
         moveCount += 1;
-
-        if (ply == 0) {
-            std.debug.print("Searching move {d}/{d}: ", .{ moveCount, moveList.count });
-            printMove(move);
-            std.debug.print("\n", .{});
-        }
 
         gameBoard.makeMove(move) catch |err| {
             if (ply == 0) {
@@ -279,10 +252,6 @@ pub fn pvSearch(
 
         // Perform the search based on position in move list and reduction
         if (moveCount == 1) {
-            if (ply == 0) {
-                std.debug.print("First move search - depth: {d}, ply: {d}\n", .{ searchDepth, nextPly });
-            }
-
             score = -(try pvSearch(
                 gameBoard,
                 attackTable,
@@ -290,14 +259,9 @@ pub fn pvSearch(
                 nextPly,
                 -beta,
                 -alpha,
-                true,
                 info,
             ));
         } else {
-            if (ply == 0) {
-                std.debug.print("Reduced search - depth: {d}, ply: {d}, reduction: {d}\n", .{ searchDepth -| reduction, nextPly, reduction });
-            }
-
             // Initial reduced search
             score = -(try pvSearch(
                 gameBoard,
@@ -306,16 +270,11 @@ pub fn pvSearch(
                 nextPly,
                 -(alpha + 1),
                 -alpha,
-                true,
                 info,
             ));
 
             // Re-search at full depth if the reduced search was promising
             if (score > alpha and reduction > 0) {
-                if (ply == 0) {
-                    std.debug.print("Re-searching at full depth\n", .{});
-                }
-
                 score = -(try pvSearch(
                     gameBoard,
                     attackTable,
@@ -323,17 +282,12 @@ pub fn pvSearch(
                     nextPly,
                     -(alpha + 1),
                     -alpha,
-                    true,
                     info,
                 ));
             }
 
             // PVS full window search if needed
             if (score > alpha and score < beta) {
-                if (ply == 0) {
-                    std.debug.print("Full window search\n", .{});
-                }
-
                 score = -(try pvSearch(
                     gameBoard,
                     attackTable,
@@ -341,7 +295,6 @@ pub fn pvSearch(
                     nextPly,
                     -beta,
                     -alpha,
-                    true,
                     info,
                 ));
             }
@@ -349,16 +302,11 @@ pub fn pvSearch(
 
         gameBoard.* = savedBoard;
 
-        if (ply == 0) {
-            std.debug.print("Move score: {d}\n", .{score});
-        }
-
         if (score >= beta) {
             if (move.moveType != .capture and move.moveType != .promotionCapture) {
                 info.killers.update(move, ply);
                 info.history.update(move.piece, @intCast(@intFromEnum(move.target)), newDepth);
             }
-            if (ply == 0) std.debug.print("Beta cutoff\n", .{});
             return beta;
         }
 
@@ -376,7 +324,6 @@ pub fn pvSearch(
             }
 
             if (ply == 0) {
-                std.debug.print("New best move found\n", .{});
                 info.bestMove = move;
             }
         }
