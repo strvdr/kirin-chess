@@ -141,6 +141,10 @@ pub const MoveList = struct {
         return self.moves[0..self.count];
     }
 
+    pub fn getMovesMut(self: *MoveList) []Move {
+        return self.moves[0..self.count];
+    }
+
     // Print all moves in the list for debugging
     pub fn print(self: *const MoveList) void {
         std.debug.print("\nMove list ({d} moves):\n", .{self.count});

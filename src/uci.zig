@@ -4,6 +4,7 @@ const movegen = @import("movegen.zig");
 const attacks = @import("attacks.zig");
 const utils = @import("utils.zig");
 const evaluation = @import("evaluation.zig");
+const search = @import("search.zig");
 
 pub const MoveParseError = error{
     InvalidMoveString,
@@ -57,7 +58,7 @@ pub fn parseMove(
 
     // Generate all legal moves
     var moveList = movegen.MoveList.init();
-    generateAllMoves(gameBoard, attackTable, &moveList);
+    search.generateAllMoves(gameBoard, attackTable, &moveList);
 
     // Look for matching move in the generated moves
     for (moveList.getMoves()) |move| {
@@ -90,140 +91,53 @@ pub fn parseMove(
     return MoveParseError.IllegalMove;
 }
 
-pub const SearchInfo = struct {
-    nodes: u64 = 0,
-    depth: u8 = 0,
-    bestMove: ?movegen.Move = null,
-    shouldStop: bool = false,
-};
-
 pub const SearchLimits = struct {
     depth: u8 = 6, // Default depth
 };
 
-const INFINITY = 50000;
-const MATE_SCORE = 49000;
-const MATE_THRESHOLD = 48000;
-
-/// Performs negamax search with alpha-beta pruning
-fn negamax(
-    gameBoard: *bitboard.Board,
-    attackTable: *const attacks.AttackTable,
-    alpha_: i32,
-    beta: i32,
-    depth: u8,
-    ply: u8,
-    info: *SearchInfo,
-) !i32 {
-    // Check if we should stop searching
-    if (info.shouldStop) {
-        return error.SearchStopped;
-    }
-
-    // Base case: evaluate position
-    if (depth == 0) {
-        return evaluation.evaluate(gameBoard);
-    }
-
-    var alpha = alpha_;
-    info.nodes += 1;
-
-    // Generate moves
-    var moveList = movegen.MoveList.init();
-    generateAllMoves(gameBoard, attackTable, &moveList);
-
-    // If no legal moves, check for mate/stalemate
-    if (moveList.count == 0) {
-        return -INFINITY + @as(i32, ply); // Return mate score adjusted by ply
-    }
-
-    var bestMove: ?movegen.Move = null;
-    //const oldAlpha = alpha;
-
-    // Search all moves
-    for (moveList.moves[0..moveList.count]) |move| {
-        // Save board state
-        const savedBoard = gameBoard.*;
-
-        // Make move
-        gameBoard.makeMove(move) catch {
-            gameBoard.* = savedBoard;
-            continue;
-        };
-
-        // Recursive search with negated bounds
-        const score = -(try negamax(
-            gameBoard,
-            attackTable,
-            -beta,
-            -alpha,
-            depth - 1,
-            ply + 1,
-            info,
-        ));
-
-        // Restore board
-        gameBoard.* = savedBoard;
-
-        // Beta cutoff
-        if (score >= beta) {
-            return beta;
-        }
-
-        // Found better move
-        if (score > alpha) {
-            alpha = score;
-            bestMove = move;
-
-            // Save best move at root
-            if (ply == 0) {
-                info.bestMove = move;
-            }
-        }
-    }
-
-    return alpha;
-}
-
-/// Generates all legal moves
-fn generateAllMoves(board: *bitboard.Board, attackTable: *const attacks.AttackTable, moves: *movegen.MoveList) void {
-    movegen.generatePawnMoves(board, attackTable, moves, movegen.MoveList.addMoveCallback);
-    movegen.generateKnightMoves(board, attackTable, moves, movegen.MoveList.addMoveCallback);
-    movegen.generateSlidingMoves(board, attackTable, moves, movegen.MoveList.addMoveCallback, true);
-    movegen.generateSlidingMoves(board, attackTable, moves, movegen.MoveList.addMoveCallback, false);
-    movegen.generateQueenMoves(board, attackTable, moves, movegen.MoveList.addMoveCallback);
-    movegen.generateKingMoves(board, attackTable, moves, movegen.MoveList.addMoveCallback);
-}
-
+pub const SearchError = error{
+    SearchStopped,
+};
 /// Main search function that initiates negamax search
 pub fn startSearch(
     gameBoard: *bitboard.Board,
     attackTable: *const attacks.AttackTable,
     limits: SearchLimits,
-) !SearchInfo {
-    var info = SearchInfo{
+) !search.SearchInfo {
+    var info = search.SearchInfo{
         .depth = limits.depth,
     };
+
+    const stdout = std.io.getStdOut().writer();
+
+    try stdout.print("Starting search to depth {d}\n", .{limits.depth});
 
     // Iterative deepening
     var depth: u8 = 1;
     while (depth <= limits.depth and !info.shouldStop) : (depth += 1) {
-        const score = try negamax(
+        try stdout.print("Searching depth {d}...\n", .{depth});
+
+        const score = try search.pvSearch(
             gameBoard,
             attackTable,
-            -INFINITY,
-            INFINITY,
             depth,
             0,
+            -search.INFINITY,
+            search.INFINITY,
+            true,
             &info,
         );
 
-        // Print info
-        try std.io.getStdOut().writer().print(
+        // Print info and flush
+        try stdout.print(
             "info depth {d} score cp {d} nodes {d}\n",
             .{ depth, score, info.nodes },
         );
+        //try std.io.getStdOut().flush();
     }
+
+    try stdout.print("Search completed\n", .{});
+    //try std.io.getStdOut().flush();
 
     return info;
 }
