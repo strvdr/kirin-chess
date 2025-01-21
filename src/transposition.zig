@@ -23,7 +23,7 @@ pub const TT_SIZE_MB = 64;
 
 // Calculate number of entries and round down to nearest power of 2
 pub const TT_ENTRIES = blk: {
-    const raw_entries = (TT_SIZE_MB * 1024 * 1024) / @sizeOf(TTEntry);
+    const raw_entries = (TT_SIZE_MB * 1024) / @sizeOf(TTEntry);
     var result: usize = 1;
     while (result * 2 <= raw_entries) : (result *= 2) {}
     break :blk result;

@@ -1,3 +1,18 @@
+// This file is part of the Kirin Chess project.
+//
+// Kirin Chess is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Kirin Chess is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Kirin Chess.  If not, see <https://www.gnu.org/licenses/>.
+
 const std = @import("std");
 
 pub fn build(b: *std.Build) void {
@@ -18,7 +33,7 @@ pub fn build(b: *std.Build) void {
     });
 
     // Set stack size to 256MB (adjust as needed)
-    exe.stack_size = 256 * 1024 * 1024;
+    exe.stack_size = 256 * 1024;
 
     // Install the executable
     b.installArtifact(exe);

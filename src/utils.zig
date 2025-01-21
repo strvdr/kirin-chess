@@ -12,6 +12,7 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with Kirin Chess.  If not, see <https://www.gnu.org/licenses/>.
+
 const std = @import("std");
 const board = @import("bitboard.zig");
 const utils = @import("utils.zig");
