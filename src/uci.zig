@@ -263,6 +263,7 @@ pub fn uciLoop(gameBoard: *bitboard.Board, attackTable: *attacks.AttackTable) !v
                 .depth = params.time_control.depth orelse 64,
                 .nodes = params.time_control.nodes,
                 .movetime = if (!params.time_control.infinite) moveTime else null,
+                .infinite = params.time_control.infinite, // Pass through the infinite flag
             };
 
             searchActive = true;
@@ -397,7 +398,15 @@ pub fn parseGo(command: []const u8) !GoCommand {
             tc.infinite = true;
         } else if (iter.next()) |value| {
             const num = std.fmt.parseInt(u64, value, 10) catch continue;
-            if (std.mem.eql(u8, token, "wtime")) {
+            if (std.mem.eql(u8, token, "depth")) {
+                tc.depth = @intCast(num);
+                tc.infinite = true; // Add this line - depth searches should run to completion
+            } else if (std.mem.eql(u8, token, "nodes")) {
+                tc.nodes = num;
+                tc.infinite = true; // Add this line - node-limited searches should run to completion
+            } else if (std.mem.eql(u8, token, "movetime")) {
+                tc.movetime = num;
+            } else if (std.mem.eql(u8, token, "wtime")) {
                 tc.wtime = num;
             } else if (std.mem.eql(u8, token, "btime")) {
                 tc.btime = num;
@@ -407,12 +416,6 @@ pub fn parseGo(command: []const u8) !GoCommand {
                 tc.binc = num;
             } else if (std.mem.eql(u8, token, "movestogo")) {
                 tc.movestogo = @intCast(num);
-            } else if (std.mem.eql(u8, token, "depth")) {
-                tc.depth = @intCast(num);
-            } else if (std.mem.eql(u8, token, "nodes")) {
-                tc.nodes = num;
-            } else if (std.mem.eql(u8, token, "movetime")) {
-                tc.movetime = num;
             }
         }
     }

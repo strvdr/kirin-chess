@@ -31,6 +31,7 @@ const FUTILITY_MARGIN: i32 = 100;
 const RAZOR_MARGIN: i32 = 300;
 const LMR_MIN_DEPTH: u8 = 3;
 const LMR_MIN_MOVES: u8 = 4;
+const HISTORY_PRUNING_THRESHOLD = -4000;
 
 pub const SearchError = error{
     SearchStopped,
@@ -201,6 +202,21 @@ pub fn pvSearch(
     const isPv = beta - alpha_ > 1;
     var alpha = alpha_;
 
+    if (!inCheck and depth >= 3 and !isPv) {
+        // Try null move
+        const savedBoard = gameBoard.*;
+        gameBoard.sideToMove = gameBoard.sideToMove.opposite();
+        gameBoard.enpassant = .noSquare;
+
+        const score = -(try pvSearch(gameBoard, attackTable, tt, depth - 3, ply + 1, -beta, -beta + 1, info, limits));
+
+        gameBoard.* = savedBoard;
+
+        if (score >= beta) {
+            return beta;
+        }
+    }
+
     var newDepth = depth;
     if (inCheck) {
         newDepth += 1;
@@ -262,6 +278,13 @@ pub fn pvSearch(
     for (moveList.getMovesMut()) |move| {
         moveCount += 1;
 
+        if (depth >= 3 and !isPv and !inCheck and move.moveType != .capture and move.moveType != .promotionCapture and alpha > -MATE_THRESHOLD) {
+            const history_score = info.history.get(move.piece, @intCast(@intFromEnum(move.target)));
+            if (history_score < HISTORY_PRUNING_THRESHOLD) {
+                continue; // Skip this move based on poor history
+            }
+        }
+
         gameBoard.makeMove(move) catch {
             gameBoard.* = savedBoard;
             continue;
@@ -271,13 +294,15 @@ pub fn pvSearch(
         var reduction: u8 = 0;
         const searchDepth = if (newDepth > 0) newDepth - 1 else 0;
 
-        // LMR and other reductions as before
         if (newDepth >= 2 and !isPv and !inCheck) {
             if (moveCount >= LMR_MIN_MOVES and move.moveType != .capture and move.moveType != .promotionCapture) {
-                reduction = if (moveCount >= 6) 1 else 0;
+                // More aggressive reduction based on depth and move count
+                reduction = if (moveCount >= 6)
+                    @min(depth / 3, 3 + @as(u8, @intFromBool(depth >= 16)) + moveCount / 8)
+                else
+                    1;
             }
         }
-
         // Principal Variation Search
         if (moveCount == 1) {
             score = -(try pvSearch(gameBoard, attackTable, tt, searchDepth, nextPly, -beta, -alpha, info, limits));
@@ -549,12 +574,18 @@ fn generateCaptures(gameBoard: *bitboard.Board, attackTable: *const attacks.Atta
 }
 
 pub const SearchLimits = struct {
-    depth: u8 = 64, // Maximum depth (default to high value)
-    movetime: ?u64 = null, // Time per move in milliseconds
-    nodes: ?u64 = null, // Maximum nodes to search
-    startTime: i128 = 0, // Start time of search
+    depth: u8 = 64,
+    movetime: ?u64 = null,
+    nodes: ?u64 = null,
+    startTime: i128 = 0,
+    infinite: bool = false, // Add this field
 
     pub fn shouldStop(self: *const SearchLimits, info: *SearchInfo) bool {
+        // Don't stop if we're in an infinite or depth-based search
+        if (self.infinite) {
+            return info.shouldStop; // Only stop on explicit stop command
+        }
+
         // Check node limit
         if (self.nodes) |maxNodes| {
             if (info.nodes >= maxNodes) {
