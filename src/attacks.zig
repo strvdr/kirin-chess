@@ -50,8 +50,7 @@ pub const AttackTable = struct {
             self.king[square] = maskKingAttacks(square);
         }
     }
-
-    fn initSliderAttacks(self: *AttackTable, is_bishop: bool) void {
+    pub fn initSliderAttacks(self: *AttackTable, is_bishop: bool) void {
         for (0..64) |sq| {
             const square = @as(u6, @intCast(sq));
             if (is_bishop) {
@@ -63,12 +62,12 @@ pub const AttackTable = struct {
                 for (0..occupancyIndices) |idx| {
                     const index = @as(u12, @intCast(idx));
                     const occupancy = utils.setOccupancy(index, bits, mask);
-                    const magicIndex =
-                        (occupancy *% board.Magic.bishopMagicNumbers[square]) >>
-                        @intCast(@as(u8, 64) - board.Magic.bishopRelevantBits[square]);
+                    const magicIndex = @as(u12, @intCast((occupancy *% board.Magic.bishopMagicNumbers[square]) >>
+                        @intCast(@as(u8, 64) - board.Magic.bishopRelevantBits[square])));
                     self.bishop[square][magicIndex] = bishopAttacksOTF(square, occupancy);
                 }
             } else {
+                // Rook initialization
                 self.rookMasks[square] = maskRookAttacks(square);
                 const mask = self.rookMasks[square];
                 const bits = utils.countBits(mask);
@@ -77,9 +76,8 @@ pub const AttackTable = struct {
                 for (0..occupancyIndices) |idx| {
                     const index = @as(u12, @intCast(idx));
                     const occupancy = utils.setOccupancy(index, bits, mask);
-                    const magicIndex =
-                        (occupancy *% board.Magic.rookMagicNumbers[square]) >>
-                        @intCast(@as(u8, 64) - board.Magic.rookRelevantBits[square]);
+                    const magicIndex = @as(u12, @intCast((occupancy *% board.Magic.rookMagicNumbers[square]) >>
+                        @intCast(@as(u8, 64) - board.Magic.rookRelevantBits[square])));
                     self.rook[square][magicIndex] = rookAttacksOTF(square, occupancy);
                 }
             }
@@ -357,11 +355,15 @@ pub fn getBishopAttacks(square: u6, occupancy: u64, table: *const AttackTable) u
 }
 
 pub fn getRookAttacks(square: u6, occupancy: u64, table: *const AttackTable) u64 {
-    var occ = occupancy;
-    occ &= table.rookMasks[square];
-    occ *%= board.Magic.rookMagicNumbers[square];
-    occ >>= @intCast(@as(u8, 64) - board.Magic.rookRelevantBits[square]);
-    return table.rook[square][occ];
+    // Get relevant occupancy by masking with rook mask
+    const occ = occupancy & table.rookMasks[square];
+
+    // Calculate magic index using rook magic numbers
+    const index = @as(u12, @intCast((occ *% board.Magic.rookMagicNumbers[square]) >>
+        @intCast((@as(u7, 64) - board.Magic.rookRelevantBits[square]))));
+
+    // Return pre-calculated rook attacks
+    return table.rook[square][index];
 }
 
 pub fn isSquareAttacked(square: u6, side: board.Side, gameBoard: *const board.Board, table: *const AttackTable) bool {

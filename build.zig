@@ -33,7 +33,7 @@ pub fn build(b: *std.Build) void {
     });
 
     // Set stack size to 256MB (adjust as needed)
-    exe.stack_size = 256 * 1024;
+    exe.stack_size = 1024 * 1024;
 
     // Install the executable
     b.installArtifact(exe);
@@ -50,16 +50,16 @@ pub fn build(b: *std.Build) void {
     const run_step = b.step("run", "Run Kirin Chess");
     run_step.dependOn(&run_cmd.step);
 
-    // Create unit tests
-    const exe_unit_tests = b.addTest(.{
-        .root_module = exe_mod,
+    const unit_tests = b.addTest(.{
+        .root_source_file = b.path("src/tests.zig"),
+        .target = target,
+        .optimize = optimize,
     });
 
-    const run_exe_unit_tests = b.addRunArtifact(exe_unit_tests);
-
-    // Add test step
+    // Create a step for unit tests
+    const run_unit_tests = b.addRunArtifact(unit_tests);
     const test_step = b.step("test", "Run unit tests");
-    test_step.dependOn(&run_exe_unit_tests.step);
+    test_step.dependOn(&run_unit_tests.step);
 
     // Add perft step
     const perft = b.step("perft", "Run perft tests");

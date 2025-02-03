@@ -70,7 +70,7 @@ const KillerMoves = struct {
 
 pub const SearchInfo = struct {
     nodes: u64 = 0,
-    depth: u8 = 0,
+    depth: i8 = 0,
     bestMove: ?movegen.Move = null,
     shouldStop: bool = false,
     history: HistoryTable = HistoryTable{},
@@ -96,14 +96,33 @@ fn scoreMoves(info: *SearchInfo, moves: []movegen.Move, ply: u8, ttMove: ?movege
         else if (info.killers.isKiller(move.*, ply)) {
             score = 900000;
         }
-        // Finally history score
-        else {
-            score = info.history.get(move.piece, @intCast(@intFromEnum(move.target)));
+        // Opening specific scoring
+        else if (ply < 10) { // Only in first 5 moves
+            // Bonus for central pawn moves
+            if (move.piece == .P or move.piece == .p) {
+                const target_file = @mod(@intFromEnum(move.target), 8);
+                const target_rank = @divFloor(@intFromEnum(move.target), 8);
+                if (target_file >= 2 and target_file <= 5) { // Central files
+                    score += 50000;
+                    if (target_rank >= 2 and target_rank <= 5) { // Central ranks
+                        score += 25000;
+                    }
+                }
+            }
+            // Penalty for early knight moves to edges
+            if (move.piece == .N or move.piece == .n) {
+                const target_file = @mod(@intFromEnum(move.target), 8);
+                if (target_file == 0 or target_file == 7) {
+                    score -= 75000;
+                }
+            }
         }
+        // Finally history score
+        score += info.history.get(move.piece, @intCast(@intFromEnum(move.target)));
 
         // Store score in the unused fields of the move
-        move.isDoubleCheck = (score > 0); // Using unused field to store score sign
-        move.isDiscoveryCheck = (score < 0); // Using unused field for additional score info
+        move.isDoubleCheck = (score > 0);
+        move.isDiscoveryCheck = (score < 0);
     }
 }
 
@@ -116,29 +135,50 @@ fn quiescence(
     info: *SearchInfo,
 ) i32 {
     info.nodes += 1;
-    if (info.shouldStop) return 0;
+    if (info.nodes & 1023 == 0 and info.shouldStop) {
+        return 0;
+    }
 
-    var alpha = alpha_;
+    // Stand pat with evaluation
     const standPat = evaluation.evaluate(gameBoard);
 
+    // Beta cutoff
     if (standPat >= beta) {
         return beta;
     }
 
+    // Delta pruning
+    const bigDelta = 900; // Value of a queen
+    if (standPat + bigDelta < alpha_) {
+        return alpha_;
+    }
+
+    var alpha = alpha_;
     if (standPat > alpha) {
         alpha = standPat;
     }
 
-    // Generate captures only
+    // Generate only captures
     var moveList = movegen.MoveList.init();
     generateCaptures(gameBoard, attackTable, &moveList);
 
-    // Score and sort moves
+    // Score and sort captures
     scoreMoves(info, moveList.getMovesMut(), 0, null);
     sortMoves(moveList.getMovesMut());
 
     const savedBoard = gameBoard.*;
+
+    // Loop through captures
     for (moveList.getMoves()) |move| {
+        // Futility pruning for captures
+        if (@TypeOf(move.capturedPiece) == movegen.CapturedPiece) {
+            const captureValue = getPieceValue(move.capturedPiece);
+            if (standPat + captureValue + 200 < alpha) {
+                continue;
+            }
+        }
+
+        // Make move
         gameBoard.makeMove(move) catch {
             gameBoard.* = savedBoard;
             continue;
@@ -183,15 +223,22 @@ pub fn pvSearch(
     gameBoard: *bitboard.Board,
     attackTable: *const attacks.AttackTable,
     tt: *transposition.TranspositionTable,
-    depth: u8,
+    depth: i8,
     ply: u8,
     alpha_: i32,
     beta: i32,
     info: *SearchInfo,
-    limits: *const SearchLimits, // Added this parameter
+    limits: *const SearchLimits,
 ) !i32 {
     if ((info.nodes & 1023) == 0 and limits.shouldStop(info)) {
-        return error.SearchTimeout; // Added explicit error
+        return error.SearchTimeout;
+    }
+
+    info.nodes += 1;
+
+    // Base cases
+    if (depth <= 0) {
+        return quiescence(gameBoard, attackTable, alpha_, beta, info);
     }
 
     if (ply >= MAX_PLY - 1) {
@@ -202,46 +249,13 @@ pub fn pvSearch(
     const isPv = beta - alpha_ > 1;
     var alpha = alpha_;
 
-    if (!inCheck and depth >= 3 and !isPv) {
-        // Try null move
-        const savedBoard = gameBoard.*;
-        gameBoard.sideToMove = gameBoard.sideToMove.opposite();
-        gameBoard.enpassant = .noSquare;
-
-        const score = -(try pvSearch(gameBoard, attackTable, tt, depth - 3, ply + 1, -beta, -beta + 1, info, limits));
-
-        gameBoard.* = savedBoard;
-
-        if (score >= beta) {
-            return beta;
-        }
-    }
-
-    var newDepth = depth;
-    if (inCheck) {
-        newDepth += 1;
-    }
-
-    if (newDepth == 0) {
-        return quiescence(gameBoard, attackTable, alpha_, beta, info);
-    }
-
-    info.nodes += 1;
-
-    // Generate position key
+    // Transposition table lookup
     const posKey = generatePositionKey(gameBoard);
-
-    // Probe transposition table
-    var ttMove: ?movegen.Move = null;
-    if (tt.probe(posKey, ply)) |entry| {
-        ttMove = entry.bestMove;
-
-        // Only use TT entries that are valid and have sufficient depth
-        if (entry.depth >= newDepth) {
-            const ttScore = entry.score;
-
-            // Additional validation for score bounds
-            if (ttScore > -INFINITY and ttScore < INFINITY) {
+    if (ply > 0) { // Skip at root
+        const ttEntry = tt.probe(posKey, ply, alpha, beta, depth);
+        if (ttEntry) |entry| {
+            if (@as(i8, entry.depth) >= depth and !isPv) {
+                const ttScore = entry.score;
                 switch (entry.entryType) {
                     .exact => return ttScore,
                     .alpha => if (ttScore <= alpha) return alpha,
@@ -251,6 +265,23 @@ pub fn pvSearch(
         }
     }
 
+    // Null move pruning
+    if (!inCheck and depth >= 3 and !isPv and ply > 0) {
+        const savedBoard = gameBoard.*;
+        gameBoard.sideToMove = gameBoard.sideToMove.opposite();
+        gameBoard.enpassant = .noSquare;
+
+        const score = -(try pvSearch(gameBoard, attackTable, tt, depth - 3, // More aggressive reduction
+            ply + 1, -beta, -beta + 1, info, limits));
+
+        gameBoard.* = savedBoard;
+
+        if (score >= beta) {
+            return beta;
+        }
+    }
+
+    // Initialize move generation
     var moveList = movegen.MoveList.init();
     generateAllMoves(gameBoard, attackTable, &moveList);
 
@@ -262,26 +293,31 @@ pub fn pvSearch(
     }
 
     var bestMove: ?movegen.Move = null;
-    var moveCount: u8 = 0;
+    var moveCount: i8 = 0;
+    var hashFlag = transposition.TTEntryType.alpha;
 
-    // Order moves using the TT move
+    // Get TT move if available
+    const ttEntry = tt.probe(posKey, ply, alpha, beta, depth);
+    const ttMove = if (ttEntry) |entry| entry.bestMove else null;
+
+    // Score and sort moves
     scoreMoves(info, moveList.getMovesMut(), ply, ttMove);
     sortMoves(moveList.getMovesMut());
 
     const savedBoard = gameBoard.*;
-    const nextPly = if (ply >= MAX_PLY - 2) ply else ply + 1;
-
-    var bestScore = -INFINITY;
-    var entryType = transposition.TTEntryType.alpha;
 
     // Main move loop
     for (moveList.getMovesMut()) |move| {
         moveCount += 1;
 
-        if (depth >= 3 and !isPv and !inCheck and move.moveType != .capture and move.moveType != .promotionCapture and alpha > -MATE_THRESHOLD) {
+        // History pruning
+        if (depth >= 3 and !isPv and !inCheck and
+            move.moveType != .capture and move.moveType != .promotionCapture and
+            alpha > -MATE_THRESHOLD and moveCount > 4)
+        {
             const history_score = info.history.get(move.piece, @intCast(@intFromEnum(move.target)));
             if (history_score < HISTORY_PRUNING_THRESHOLD) {
-                continue; // Skip this move based on poor history
+                continue;
             }
         }
 
@@ -291,75 +327,68 @@ pub fn pvSearch(
         };
 
         var score: i32 = undefined;
-        var reduction: u8 = 0;
-        const searchDepth = if (newDepth > 0) newDepth - 1 else 0;
+        const newDepth = depth - 1;
 
-        if (newDepth >= 2 and !isPv and !inCheck) {
-            if (moveCount >= LMR_MIN_MOVES and move.moveType != .capture and move.moveType != .promotionCapture) {
-                // More aggressive reduction based on depth and move count
-                reduction = if (moveCount >= 6)
-                    @min(depth / 3, 3 + @as(u8, @intFromBool(depth >= 16)) + moveCount / 8)
-                else
-                    1;
+        // Late Move Reduction
+        if (moveCount >= 4 and depth >= 3 and !inCheck and
+            move.moveType != .capture and move.moveType != .promotionCapture)
+        {
+            const reduction: i8 = if (moveCount >= 6)
+                @min(@divFloor(depth, 3), 3 + @as(i8, @intFromBool(depth >= 16)) + @divFloor(moveCount, 8))
+            else
+                1;
+
+            score = -(try pvSearch(gameBoard, attackTable, tt, newDepth - reduction, ply + 1, -alpha - 1, -alpha, info, limits));
+
+            if (score > alpha) {
+                // Research at full depth
+                score = -(try pvSearch(gameBoard, attackTable, tt, newDepth, ply + 1, -beta, -alpha, info, limits));
             }
-        }
-        // Principal Variation Search
-        if (moveCount == 1) {
-            score = -(try pvSearch(gameBoard, attackTable, tt, searchDepth, nextPly, -beta, -alpha, info, limits));
+        } else if (moveCount == 1) {
+            // First move - full window search
+            score = -(try pvSearch(gameBoard, attackTable, tt, newDepth, ply + 1, -beta, -alpha, info, limits));
         } else {
-            score = -(try pvSearch(gameBoard, attackTable, tt, searchDepth -| reduction, nextPly, -(alpha + 1), -alpha, info, limits));
-
-            if (score > alpha and reduction > 0) {
-                score = -(try pvSearch(gameBoard, attackTable, tt, searchDepth, nextPly, -(alpha + 1), -alpha, info, limits));
-            }
+            // Try null window search first
+            score = -(try pvSearch(gameBoard, attackTable, tt, newDepth, ply + 1, -alpha - 1, -alpha, info, limits));
 
             if (score > alpha and score < beta) {
-                score = -(try pvSearch(gameBoard, attackTable, tt, searchDepth, nextPly, -beta, -alpha, info, limits));
+                // Research with full window
+                score = -(try pvSearch(gameBoard, attackTable, tt, newDepth, ply + 1, -beta, -alpha, info, limits));
             }
         }
 
         gameBoard.* = savedBoard;
 
-        if (score > bestScore) {
-            bestScore = score;
+        if (score > alpha) {
+            hashFlag = .exact;
             bestMove = move;
-
-            if (score > alpha) {
-                alpha = score;
-                entryType = .exact;
-
-                // Update PV table
-                if (ply < MAX_PLY - 1) {
-                    info.pvTable[ply][ply] = move;
-                    var nextPlyPv: u8 = ply + 1;
-                    while (nextPlyPv < info.pvLength[ply + 1] and nextPlyPv < MAX_PLY) : (nextPlyPv += 1) {
-                        info.pvTable[ply][nextPlyPv] = info.pvTable[ply + 1][nextPlyPv];
-                    }
-                    info.pvLength[ply] = info.pvLength[ply + 1];
-                }
-
-                if (ply == 0) {
-                    info.bestMove = move;
-                }
+            if (ply == 0) { // Add this line: update info.bestMove at root
+                info.bestMove = move;
             }
-        }
+            alpha = score;
 
-        if (score >= beta) {
+            // Update history
             if (move.moveType != .capture and move.moveType != .promotionCapture) {
-                info.killers.update(move, ply);
-                info.history.update(move.piece, @intCast(@intFromEnum(move.target)), newDepth);
+                info.history.update(move.piece, @intCast(@intFromEnum(move.target)), @intCast(depth));
             }
-            tt.store(posKey, newDepth, beta, .beta, bestMove, ply);
-            return beta;
+
+            if (score >= beta) {
+                // Beta cutoff - store killer moves
+                if (move.moveType != .capture and move.moveType != .promotionCapture) {
+                    info.killers.update(move, ply);
+                }
+
+                tt.store(posKey, @intCast(depth), beta, .beta, bestMove, ply);
+                return beta;
+            }
         }
     }
 
     // Store position in transposition table
-    tt.store(posKey, newDepth, bestScore, entryType, bestMove, ply);
-    return bestScore;
+    tt.store(posKey, @intCast(depth), alpha, hashFlag, bestMove, ply);
+    return alpha;
 }
 
-// Generate a unique key for the current position
 fn generatePositionKey(gameBoard: *const bitboard.Board) u64 {
     var key: u64 = 0;
 
@@ -574,7 +603,7 @@ fn generateCaptures(gameBoard: *bitboard.Board, attackTable: *const attacks.Atta
 }
 
 pub const SearchLimits = struct {
-    depth: u8 = 64,
+    depth: i8 = 64,
     movetime: ?u64 = null,
     nodes: ?u64 = null,
     startTime: i128 = 0,
@@ -608,7 +637,7 @@ pub const SearchLimits = struct {
 pub const SearchResult = struct {
     bestMove: ?movegen.Move = null,
     score: i32 = 0,
-    depth: u8 = 0,
+    depth: i8 = 0,
     nodes: u64 = 0,
 };
 
@@ -642,7 +671,7 @@ pub fn startSearch(
     @memset(&info.pvTable, undefined);
 
     // Iterative deepening
-    var iterationDepth: u8 = 1;
+    var iterationDepth: i8 = 1;
     while (iterationDepth <= limits.depth) : (iterationDepth += 1) {
         const score = pvSearch(
             gameBoard,
@@ -677,7 +706,7 @@ pub fn startSearch(
     return result;
 }
 
-fn printSearchInfo(info: *const SearchInfo, score: i32, depth: u8) !void {
+fn printSearchInfo(info: *const SearchInfo, score: i32, depth: i8) !void {
     const stdout = std.io.getStdOut().writer();
 
     try stdout.print("info depth {d} score ", .{depth});

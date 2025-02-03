@@ -221,8 +221,18 @@ pub fn addLegalMove(
         var updatedMove = move;
 
         // Get opponent's king square
-        const kingBoard = if (savedBoard.sideToMove == .white) board.bitboard[@intFromEnum(bitboard.Piece.k)] else board.bitboard[@intFromEnum(bitboard.Piece.K)];
-        const kingSquare = @as(u6, @intCast(utils.getLSBindex(kingBoard)));
+        const kingBoard = if (savedBoard.sideToMove == .white)
+            board.bitboard[@intFromEnum(bitboard.Piece.k)]
+        else
+            board.bitboard[@intFromEnum(bitboard.Piece.K)];
+
+        // Check if king exists and get its square
+        const lsbIndex = utils.getLSBindex(kingBoard);
+        if (lsbIndex < 0 or lsbIndex >= 64) {
+            board.* = savedBoard;
+            return;
+        }
+        const kingSquare = @as(u6, @intCast(lsbIndex));
 
         const sourceSquare: u6 = @intCast(@intFromEnum(move.source));
         const discoveryPossible = isDiscoveryCheck(sourceSquare, kingSquare);
@@ -252,6 +262,7 @@ pub fn addLegalMove(
 
         updatedMove.isCheck = directCheck or discoveryCheck;
         updatedMove.isDiscoveryCheck = discoveryCheck and !directCheck;
+        updatedMove.isDoubleCheck = directCheck and discoveryCheck;
 
         // Restore board state
         board.* = savedBoard;

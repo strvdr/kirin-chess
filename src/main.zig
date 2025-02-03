@@ -21,6 +21,8 @@ const movegen = @import("movegen.zig");
 const utils = @import("utils.zig");
 const Perft = @import("perft.zig");
 const uci = @import("uci.zig");
+const magics = @import("magics.zig");
+const syzygy = @import("syzygy.zig");
 
 const Mode = enum {
     play,
@@ -32,8 +34,8 @@ const Mode = enum {
 /// around with Kirin!
 fn runDebugMode(gameBoard: *board.Board) !void {
     std.debug.print("Debug mode initialized\n", .{});
-
     utils.printBoard(gameBoard);
+    try magics.regenerateAllMagicNumbers();
 }
 
 /// This is the fun mode. Running play mode allows you to play against Kirin, whether that be in the terminal,
@@ -58,6 +60,13 @@ pub fn main() !void {
     var gameBoard = board.Board.init();
     var attackTable: attacks.AttackTable = undefined;
     attackTable.init();
+
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer _ = gpa.deinit();
+    const allocator = gpa.allocator();
+
+    var opening_book = syzygy.OpeningBook.init(allocator);
+    defer opening_book.deinit();
 
     // Set up initial position
     try utils.parseFEN(&gameBoard, board.Position.start);

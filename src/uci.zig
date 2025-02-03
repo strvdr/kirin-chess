@@ -21,9 +21,13 @@ const utils = @import("utils.zig");
 const evaluation = @import("evaluation.zig");
 const search = @import("search.zig");
 const transposition = @import("transposition.zig");
+const syzygy = @import("syzygy.zig");
 
 pub const ENGINE_NAME = "Kirin Chess";
 pub const ENGINE_AUTHOR = "Strydr Silverberg";
+
+pub const RESIGN_THRESHOLD: i32 = -500; // Resign if eval is worse than -10 pawns
+pub const RESIGN_PLIES: u8 = 4;
 
 pub const MoveParseError = error{
     InvalidMoveString,
@@ -43,6 +47,32 @@ pub const GoParseError = error{
     InvalidCommand,
     InvalidDepth,
 };
+
+const ResignTracker = struct {
+    bad_positions: u8 = 0,
+    prev_eval: i32 = 0,
+
+    pub fn shouldResign(self: *ResignTracker, eval: i32) bool {
+        if (eval < RESIGN_THRESHOLD) {
+            self.bad_positions += 1;
+            if (self.bad_positions >= RESIGN_PLIES and
+                self.prev_eval < RESIGN_THRESHOLD)
+            {
+                return true;
+            }
+        } else {
+            self.bad_positions = 0;
+        }
+        self.prev_eval = eval;
+        return false;
+    }
+
+    pub fn reset(self: *ResignTracker) void {
+        self.bad_positions = 0;
+        self.prev_eval = 0;
+    }
+};
+
 /// Parses a move string in the format "e2e4" or "e7e8q" for promotions
 /// Returns the corresponding Move struct if the move is legal
 pub fn parseMove(
@@ -205,11 +235,18 @@ pub fn uciLoop(gameBoard: *bitboard.Board, attackTable: *attacks.AttackTable) !v
 
     // Create transposition table
     var tt = transposition.TranspositionTable.init();
+
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer _ = gpa.deinit();
+    var opening_book = syzygy.OpeningBook.init(gpa.allocator());
+    defer opening_book.deinit();
+
     var searchActive = false;
     var timer = std.time.Timer.start() catch |err| {
         try stdout.print("info string Error initializing timer: {}\n", .{err});
         return;
     };
+
     // Print engine info
     try stdout.print("id name {s}\n", .{ENGINE_NAME});
     try stdout.print("id author {s}\n", .{ENGINE_AUTHOR});
@@ -217,6 +254,7 @@ pub fn uciLoop(gameBoard: *bitboard.Board, attackTable: *attacks.AttackTable) !v
 
     // Fixed buffer for input
     var buffer: [2000]u8 = undefined;
+    var resignTracker = ResignTracker{};
 
     while (true) {
         // Get user/GUI input
@@ -249,6 +287,12 @@ pub fn uciLoop(gameBoard: *bitboard.Board, attackTable: *attacks.AttackTable) !v
             };
             // Clear transposition table for new game
             tt.clear();
+            resignTracker.reset();
+        } else if (std.mem.startsWith(u8, input, "setoption name BookFile value ")) {
+            const filename = input["setoption name BookFile value ".len..];
+            opening_book.loadFromFile(filename) catch |err| {
+                try stdout.print("info string Error loading book: {}\n", .{err});
+            };
         } else if (std.mem.startsWith(u8, input, "go")) {
             const params = parseGo(input) catch |err| {
                 try stdout.print("info string Error parsing go command: {}\n", .{err});
@@ -260,63 +304,57 @@ pub fn uciLoop(gameBoard: *bitboard.Board, attackTable: *attacks.AttackTable) !v
 
             // Set up search limits
             const limits = search.SearchLimits{
-                .depth = params.time_control.depth orelse 64,
+                .depth = @as(i8, params.time_control.depth orelse 64),
                 .nodes = params.time_control.nodes,
                 .movetime = if (!params.time_control.infinite) moveTime else null,
-                .infinite = params.time_control.infinite, // Pass through the infinite flag
+                .infinite = params.time_control.infinite,
             };
 
             searchActive = true;
             timer.reset();
 
-            // After performing the search:
+            // Try to get a book move first
+            if (try opening_book.getBookMove(gameBoard)) |book_move| {
+                try stdout.print("info string using book move\n", .{});
+                try stdout.print("bestmove ", .{});
+                try printUciMove(stdout, book_move);
+                searchActive = false;
+                continue;
+            }
+
+            // No book move found, proceed with normal search
             const result = search.startSearch(gameBoard, attackTable, &tt, limits) catch |err| {
                 try stdout.print("info string Search error: {}\n", .{err});
                 try stdout.print("bestmove 0000\n", .{});
+                searchActive = false;
                 continue;
             };
 
-            // Now using result.bestMove
+            if (resignTracker.shouldResign(result.score)) {
+                try stdout.print("bestmove 0000\n", .{});
+                searchActive = false;
+                continue;
+            }
+
             if (result.bestMove) |best_move| {
-                var moveStr: [5]u8 = undefined;
-                var moveLen: usize = 4;
-
-                const sourceCoords = best_move.source.toCoordinates() catch {
-                    try stdout.print("bestmove 0000\n", .{});
-                    continue;
-                };
-                const targetCoords = best_move.target.toCoordinates() catch {
-                    try stdout.print("bestmove 0000\n", .{});
-                    continue;
-                };
-
-                moveStr[0] = sourceCoords[0];
-                moveStr[1] = sourceCoords[1];
-                moveStr[2] = targetCoords[0];
-                moveStr[3] = targetCoords[1];
-
-                if (best_move.moveType == movegen.MoveType.promotion or best_move.moveType == movegen.MoveType.promotionCapture) {
-                    moveStr[4] = switch (best_move.promotionPiece) {
-                        movegen.PromotionPiece.queen => 'q',
-                        movegen.PromotionPiece.rook => 'r',
-                        movegen.PromotionPiece.bishop => 'b',
-                        movegen.PromotionPiece.knight => 'n',
-                        movegen.PromotionPiece.none => ' ',
-                    };
-                    moveLen = 5;
-                }
-
                 try stdout.print("bestmove ", .{});
-                _ = try stdout.write(moveStr[0..moveLen]);
-                try stdout.print("\n", .{});
+                try printUciMove(stdout, best_move);
             } else {
                 try stdout.print("bestmove 0000\n", .{});
+            }
+
+            searchActive = false;
+        } else if (std.mem.eql(u8, input, "stop")) {
+            if (searchActive) {
+                // Handle stopping the search
+                searchActive = false;
             }
         } else if (std.mem.eql(u8, input, "quit")) {
             break;
         } else if (std.mem.eql(u8, input, "uci")) {
             try stdout.print("id name {s}\n", .{ENGINE_NAME});
             try stdout.print("id author {s}\n", .{ENGINE_AUTHOR});
+            try stdout.print("option name BookFile type string default <empty>\n", .{});
             try stdout.print("uciok\n", .{});
         } else if (std.mem.eql(u8, input, "d")) {
             // Debug command to print board
@@ -339,7 +377,7 @@ pub const TimeControl = struct {
     binc: ?u64 = null, // Black increment per move in ms
     movestogo: ?u32 = null, // Moves until next time control
     movetime: ?u64 = null, // Exact time to use for this move
-    depth: ?u8 = null, // Maximum depth to search
+    depth: ?i8 = null, // Maximum depth to search
     nodes: ?u64 = null, // Maximum nodes to search
     infinite: bool = false, // Search until "stop" command
 
@@ -399,11 +437,11 @@ pub fn parseGo(command: []const u8) !GoCommand {
         } else if (iter.next()) |value| {
             const num = std.fmt.parseInt(u64, value, 10) catch continue;
             if (std.mem.eql(u8, token, "depth")) {
-                tc.depth = @intCast(num);
-                tc.infinite = true; // Add this line - depth searches should run to completion
+                tc.depth = @intCast(@min(num, 127)); // Ensure we don't overflow i8
+                tc.infinite = true;
             } else if (std.mem.eql(u8, token, "nodes")) {
                 tc.nodes = num;
-                tc.infinite = true; // Add this line - node-limited searches should run to completion
+                tc.infinite = true;
             } else if (std.mem.eql(u8, token, "movetime")) {
                 tc.movetime = num;
             } else if (std.mem.eql(u8, token, "wtime")) {
@@ -427,18 +465,18 @@ fn printUciMove(writer: anytype, move: movegen.Move) !void {
     const sourceCoords = try move.source.toCoordinates();
     const targetCoords = try move.target.toCoordinates();
 
-    try writer.print("bestmove {c}{c}{c}{c}", .{
+    // Removed the "bestmove" prefix since it's added by the caller
+    try writer.print("{c}{c}{c}{c}", .{
         sourceCoords[0],
         sourceCoords[1],
         targetCoords[0],
         targetCoords[1],
     });
 
-    // Here we need to use the proper movegen identifiers
     if (move.moveType == movegen.MoveType.promotion or
         move.moveType == movegen.MoveType.promotionCapture)
     {
-        const promo_char = switch (move.promotionPiece) {
+        const promo_char: u8 = switch (move.promotionPiece) {
             movegen.PromotionPiece.queen => 'q',
             movegen.PromotionPiece.rook => 'r',
             movegen.PromotionPiece.bishop => 'b',
@@ -447,6 +485,4 @@ fn printUciMove(writer: anytype, move: movegen.Move) !void {
         };
         try writer.print("{c}", .{promo_char});
     }
-
-    try writer.print("\n", .{});
 }

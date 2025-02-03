@@ -13,23 +13,23 @@
 // You should have received a copy of the GNU General Public License
 // along with Kirin Chess.  If not, see <https://www.gnu.org/licenses/>.
 
+const Random = std.Random.DefaultPrng;
 const std = @import("std");
 const board = @import("bitboard.zig");
 const movegen = @import("movegen.zig");
-const Random = std.Random.DefaultPrng;
 
-// Size configuration - adjust based on your needs
-pub const TT_SIZE_MB = 64;
+pub const TT_SIZE_MB = 512;
 
 // Calculate number of entries and round down to nearest power of 2
 pub const TT_ENTRIES = blk: {
-    const raw_entries = (TT_SIZE_MB * 1024) / @sizeOf(TTEntry);
+    const bytes_per_entry = @sizeOf(TTEntry);
+    const total_bytes = TT_SIZE_MB * 1024;
+    const raw_entries = total_bytes / bytes_per_entry;
     var result: usize = 1;
     while (result * 2 <= raw_entries) : (result *= 2) {}
     break :blk result;
 };
 
-// Entry type for the transposition table
 pub const TTEntryType = enum(u2) {
     exact, // Exact score
     alpha, // Upper bound
@@ -37,65 +37,92 @@ pub const TTEntryType = enum(u2) {
 };
 
 pub const TTEntry = struct {
-    key: u64, // Zobrist hash of the position
-    depth: u8, // Search depth
-    score: i32, // Evaluation score
-    entryType: TTEntryType, // Type of score stored
-    bestMove: ?movegen.Move, // Best move found in this position
-    age: u8, // Age of the entry for replacement
-    is_valid: bool = false, // New field to track validity
+    key: u64,
+    depth: i8,
+    score: i32,
+    entryType: TTEntryType,
+    bestMove: ?movegen.Move,
+    age: u8,
+    generation: u8,
+    is_valid: bool,
+
+    pub fn init() TTEntry {
+        return .{
+            .key = 0,
+            .depth = 0,
+            .score = 0,
+            .entryType = .exact,
+            .bestMove = null,
+            .age = 0,
+            .generation = 0,
+            .is_valid = false,
+        };
+    }
 };
 
 pub const TranspositionTable = struct {
-    // Fixed-size array, no allocation needed
-    entries: [TT_ENTRIES]TTEntry align(64) = undefined, // Align to cache line
-    age: u8 = 0,
+    entries: [TT_ENTRIES]TTEntry align(64),
+    generation: u8,
+    age: u8, // Added back the age field
 
-    const Self = @This();
-
-    // Initialize all entries to empty
-    pub fn init() Self {
-        var table = Self{};
-        table.clear();
-        return table;
+    pub fn init() TranspositionTable {
+        return .{
+            .entries = [_]TTEntry{TTEntry.init()} ** TT_ENTRIES,
+            .generation = 1,
+            .age = 0,
+        };
     }
 
-    pub fn probe(self: *const Self, key: u64, ply: u8) ?TTEntry {
+    pub fn probe(self: *const TranspositionTable, key: u64, ply: u8, alpha: i32, beta: i32, depth: i8) ?TTEntry {
         const index = @as(usize, @intCast(key & (TT_ENTRIES - 1)));
         const entry = self.entries[index];
 
-        // First check if the entry is valid and has the correct key
-        if (entry.is_valid and entry.key == key) {
-            // Readjust mate scores based on current ply
-            var adjusted_entry = entry;
-            if (entry.score > 48000) {
-                adjusted_entry.score -= @as(i32, ply);
-            } else if (entry.score < -48000) {
-                adjusted_entry.score += @as(i32, ply);
-            }
-            return adjusted_entry;
+        if (!entry.is_valid or entry.key != key) {
+            return null;
         }
 
-        return null;
+        // Only use entries that are deep enough
+        if (entry.depth >= depth) {
+            var score = entry.score;
+
+            // Adjust mate scores relative to current ply
+            if (score > 48000) {
+                score -= @as(i32, ply);
+            } else if (score < -48000) {
+                score += @as(i32, ply);
+            }
+
+            // Return based on entry type and bounds
+            switch (entry.entryType) {
+                .exact => return entry,
+                .alpha => if (score <= alpha) return entry,
+                .beta => if (score >= beta) return entry,
+            }
+        }
+
+        // Return the entry for move ordering even if we can't use the score
+        return entry;
     }
 
-    pub fn store(self: *Self, key: u64, depth: u8, score: i32, entryType: TTEntryType, bestMove: ?movegen.Move, ply: u8) void {
+    pub fn store(self: *TranspositionTable, key: u64, depth: i8, score: i32, entryType: TTEntryType, bestMove: ?movegen.Move, ply: u8) void {
         const index = @as(usize, @intCast(key & (TT_ENTRIES - 1)));
         const current = &self.entries[index];
 
-        const replace = !current.is_valid or
-            current.age != self.age or
-            depth >= current.depth or
-            entryType == .exact;
+        // More sophisticated replacement strategy
+        const should_replace = !current.is_valid or
+            current.generation != self.generation or
+            depth >= current.depth - 2 or // Allow replacing slightly shallower entries
+            (depth == current.depth and entryType == .exact) or
+            (current.age < self.age and depth + 3 >= current.depth); // Age-based replacement
 
-        if (replace) {
-            // Adjust mate scores to account for distance from root
-            const adjusted_score = if (score > 48000)
-                score + @as(i32, ply)
-            else if (score < -48000)
-                score - @as(i32, ply)
-            else
-                score;
+        if (should_replace) {
+            // Adjust mate scores to be relative to root
+            var adjusted_score = score;
+            if (score > 48000) {
+                adjusted_score += @as(i32, ply);
+            } else if (score < -48000) {
+                adjusted_score -= @as(i32, ply);
+            }
 
             current.* = .{
                 .key = key,
@@ -104,33 +131,40 @@ pub const TranspositionTable = struct {
                 .entryType = entryType,
                 .bestMove = bestMove,
                 .age = self.age,
+                .generation = self.generation,
                 .is_valid = true,
             };
+        } else if (bestMove != null and current.bestMove == null) {
+            // Always store a new best move even if we don't replace the entry
+            current.bestMove = bestMove;
         }
     }
 
-    pub fn clear(self: *Self) void {
-        @memset(&self.entries, TTEntry{
-            .key = 0,
-            .depth = 0,
-            .score = 0,
-            .entryType = .exact,
-            .bestMove = null,
-            .age = 0,
-            .is_valid = false,
-        });
+    pub fn clear(self: *TranspositionTable) void {
+        for (&self.entries) |*entry| {
+            entry.* = TTEntry.init();
+        }
+        self.generation = 1;
         self.age = 0;
     }
 
-    pub fn incrementAge(self: *Self) void {
+    pub fn newSearch(self: *TranspositionTable) void {
+        self.generation +%= 1;
+        if (self.generation == 0) self.generation = 1;
+    }
+
+    pub fn incrementAge(self: *TranspositionTable) void {
         self.age +%= 1;
     }
 };
 
 // Simple compile-time random number generator
 fn comptime_random(seed: u64) u64 {
-    const result = (seed +% 0x9E3779B97f4A7C15) *% 0x2545F4914F6CDD1D;
-    return result ^ (result >> 32);
+    var x = seed;
+    x ^= (x << 13) & 0xFFFFFFFFFFFFFFFF;
+    x ^= (x >> 7) & 0xFFFFFFFFFFFFFFFF;
+    x ^= (x << 17) & 0xFFFFFFFFFFFFFFFF;
+    return x;
 }
 
 pub const ZobristKeys = struct {

@@ -19,127 +19,127 @@ const utils = @import("utils.zig");
 
 // Modern piece values (in centipawns)
 pub const MaterialScore = struct {
-    // White pieces (positive scores)
-    pub const whitePawn: i32 = 100;
-    pub const whiteKnight: i32 = 320;
-    pub const whiteBishop: i32 = 330;
-    pub const whiteRook: i32 = 500;
-    pub const whiteQueen: i32 = 900;
-    pub const whiteKing: i32 = 20000;
+    // Use comptime to ensure these are computed at compile time
+    pub const values = [12]i32{
+        100, // White Pawn
+        320, // White Knight
+        330, // White Bishop
+        500, // White Rook
+        900, // White Queen
+        20000, // White King
+        -100, // Black Pawn
+        -320, // Black Knight
+        -330, // Black Bishop
+        -500, // Black Rook
+        -900, // Black Queen
+        -20000, // Black King
+    };
 
-    // Black pieces (negative scores)
-    pub const blackPawn: i32 = -100;
-    pub const blackKnight: i32 = -320;
-    pub const blackBishop: i32 = -330;
-    pub const blackRook: i32 = -500;
-    pub const blackQueen: i32 = -900;
-    pub const blackKing: i32 = -20000;
-
-    pub fn getScore(piece: board.Piece) i32 {
-        return switch (piece) {
-            .P => MaterialScore.whitePawn,
-            .N => MaterialScore.whiteKnight,
-            .B => MaterialScore.whiteBishop,
-            .R => MaterialScore.whiteRook,
-            .Q => MaterialScore.whiteQueen,
-            .K => MaterialScore.whiteKing,
-            .p => MaterialScore.blackPawn,
-            .n => MaterialScore.blackKnight,
-            .b => MaterialScore.blackBishop,
-            .r => MaterialScore.blackRook,
-            .q => MaterialScore.blackQueen,
-            .k => MaterialScore.blackKing,
-        };
+    pub inline fn getScore(piece: board.Piece) i32 {
+        return values[@intFromEnum(piece)];
     }
 };
 
 // Modern positional scores based on recent engine analysis
 pub const PositionalScore = struct {
-    // Pawn positioning (emphasizes center control and advancement)
-    pub const pawnTable = [64]i32{
-        0, 0, 0, 0, 0, 0, 0, 0, // 8th rank
-        100, 100, 100, 100, 100, 100, 100, 100, // 7th rank (promotion potential)
-        50, 50, 50, 60, 60, 50, 50, 50, // 6th rank
-        25, 25, 35, 45, 45, 35, 25, 25, // 5th rank
-        10, 10, 20, 35, 35, 20, 10, 10, // 4th rank
-        5, 5, 10, 20, 20, 10, 5, 5, // 3rd rank
-        5, 5, 5, 0, 0, 5, 5, 5, // 2nd rank
-        0, 0, 0, 0, 0, 0, 0, 0, // 1st rank
+    // Compile-time initialized tables
+    const pawnTable = init: {
+        var table: [64]i32 = undefined;
+        const base = [8]i32{ 0, 5, 5, 0, 5, 10, 50, 0 };
+        const bonus = [8]i32{ 0, 0, 10, 20, 30, 40, 50, 0 };
+
+        for (0..64) |sq| {
+            const rank: i32 = @intCast(sq / 8);
+            const file: i32 = @intCast(sq % 8);
+            const center_file_bonus: i32 = if (file == 3 or file == 4) 10 else 0;
+            table[sq] = base[@intCast(rank)] + bonus[@intCast(rank)] + center_file_bonus;
+        }
+        break :init table;
     };
 
-    // Knight positioning (emphasizes centralization and outposts)
-    pub const knightTable = [64]i32{
-        -50, -10, -10, -10, -10, -10, -10, -50, // 8th rank
-        -10, 0, 0, 0, 0, 0, 0, -10, // 7th rank
-        -10, 0, 10, 15, 15, 10, 0, -10, // 6th rank
-        -10, 5, 15, 20, 20, 15, 5, -10, // 5th rank
-        -10, 5, 15, 20, 20, 15, 5, -10, // 4th rank
-        -10, 0, 10, 15, 15, 10, 0, -10, // 3rd rank
-        -10, 0, 0, 0, 0, 0, 0, -10, // 2nd rank
-        -50, -10, -10, -10, -10, -10, -10, -50, // 1st rank
+    const knightTable = init: {
+        var table: [64]i32 = undefined;
+        for (0..64) |sq| {
+            const rank: i32 = @intCast(sq / 8);
+            const file: i32 = @intCast(sq % 8);
+            // Calculate distance to center squares
+            const file_dist = @min(@abs(file - 3), @abs(file - 4));
+            const rank_dist = @min(@abs(rank - 3), @abs(rank - 4));
+            const center_dist: i32 = @max(file_dist, rank_dist);
+            table[sq] = 20 - (center_dist * 5);
+        }
+        break :init table;
     };
 
-    // Bishop positioning (emphasizes diagonals and fianchetto)
-    pub const bishopTable = [64]i32{
-        -20, -10, -10, -10, -10, -10, -10, -20, // 8th rank
-        -10, 5, 0, 0, 0, 0, 5, -10, // 7th rank
-        -10, 10, 10, 10, 10, 10, 10, -10, // 6th rank
-        -10, 0, 10, 10, 10, 10, 0, -10, // 5th rank
-        -10, 5, 5, 10, 10, 5, 5, -10, // 4th rank
-        -10, 0, 5, 10, 10, 5, 0, -10, // 3rd rank
-        -10, 0, 0, 0, 0, 0, 0, -10, // 2nd rank
-        -20, -10, -10, -10, -10, -10, -10, -20, // 1st rank
+    const bishopTable = init: {
+        var table: [64]i32 = undefined;
+        for (0..64) |sq| {
+            const rank: i32 = @intCast(sq / 8);
+            const file: i32 = @intCast(sq % 8);
+            // Favor diagonals and center control
+            const diagonal_bonus: i32 = if (file == rank or file == (7 - rank)) 15 else 0;
+            const center_control: i32 = if ((rank == 3 or rank == 4) and (file == 3 or file == 4)) 10 else 0;
+            table[sq] = diagonal_bonus + center_control;
+        }
+        break :init table;
     };
 
-    // Rook positioning (emphasizes open files and 7th rank)
-    pub const rookTable = [64]i32{
-        0, 0, 0, 5, 5, 0, 0, 0, // 8th rank
-        5, 10, 10, 10, 10, 10, 10, 5, // 7th rank
-        -5, 0, 0, 0, 0, 0, 0, -5, // 6th rank
-        -5, 0, 0, 0, 0, 0, 0, -5, // 5th rank
-        -5, 0, 0, 0, 0, 0, 0, -5, // 4th rank
-        -5, 0, 0, 0, 0, 0, 0, -5, // 3rd rank
-        -5, 0, 0, 0, 0, 0, 0, -5, // 2nd rank
-        0, 0, 0, 5, 5, 0, 0, 0, // 1st rank
+    const rookTable = init: {
+        var table: [64]i32 = undefined;
+        for (0..64) |sq| {
+            const rank: i32 = @intCast(sq / 8);
+            const file: i32 = @intCast(sq % 8);
+            // Bonus for 7th rank and open files
+            const seventh_rank_bonus: i32 = if (rank == 6 or rank == 1) 20 else 0;
+            const file_bonus: i32 = if (file == 0 or file == 7) 10 else 0;
+            table[sq] = seventh_rank_bonus + file_bonus;
+        }
+        break :init table;
     };
 
-    // Queen positioning (emphasizes center control and development)
-    pub const queenTable = [64]i32{
-        -20, -10, -10, -5, -5, -10, -10, -20, // 8th rank
-        -10, 0, 0, 0, 0, 0, 0, -10, // 7th rank
-        -10, 0, 5, 5, 5, 5, 0, -10, // 6th rank
-        -5, 0, 5, 5, 5, 5, 0, -5, // 5th rank
-        0, 0, 5, 5, 5, 5, 0, -5, // 4th rank
-        -10, 5, 5, 5, 5, 5, 0, -10, // 3rd rank
-        -10, 0, 5, 0, 0, 0, 0, -10, // 2nd rank
-        -20, -10, -10, -5, -5, -10, -10, -20, // 1st rank
+    const queenTable = init: {
+        var table: [64]i32 = undefined;
+        for (0..64) |sq| {
+            const rank: i32 = @intCast(sq / 8);
+            const file: i32 = @intCast(sq % 8);
+            // Center control and safe squares
+            const file_dist = @min(@abs(file - 3), @abs(file - 4));
+            const rank_dist = @min(@abs(rank - 3), @abs(rank - 4));
+            const center_dist: i32 = @max(file_dist, rank_dist);
+            table[sq] = 15 - (center_dist * 3);
+        }
+        break :init table;
     };
 
-    // King positioning (middlegame - emphasizes safety and castling)
-    pub const kingTable = [64]i32{
-        20, 30, 10, 0, 0, 10, 30, 20, // 8th rank
-        20, 20, 0, 0, 0, 0, 20, 20, // 7th rank
-        -10, -20, -20, -20, -20, -20, -20, -10, // 6th rank
-        -20, -30, -30, -40, -40, -30, -30, -20, // 5th rank
-        -30, -40, -40, -50, -50, -40, -40, -30, // 4th rank
-        -30, -40, -40, -50, -50, -40, -40, -30, // 3rd rank
-        -30, -40, -40, -50, -50, -40, -40, -30, // 2nd rank
-        -30, -40, -40, -50, -50, -40, -40, -30, // 1st rank
+    const kingTable = init: {
+        var table: [64]i32 = undefined;
+        for (0..64) |sq| {
+            const rank: i32 = @intCast(sq / 8);
+            const file: i32 = @intCast(sq % 8);
+            // Encourage castling and king safety
+            const castle_bonus: i32 = if ((file <= 2 or file >= 6) and rank == 0) 30 else 0;
+            const back_rank_bonus: i32 = if (rank == 0) 20 else -20 * rank;
+            table[sq] = castle_bonus + back_rank_bonus;
+        }
+        break :init table;
     };
 
-    // Get positional score for a piece at a given square
-    pub fn getScore(piece: board.Piece, square: u6) i32 {
+    // Use inline for better performance
+    pub inline fn getScore(piece: board.Piece, square: u6, is_endgame: bool) i32 {
         // Mirror square for black pieces
         const actualSquare = if (piece.isWhite()) square else 63 - square;
 
-        // Get base positional score
+        // Get base positional score using a fast lookup table
         const score = switch (piece) {
             .P, .p => pawnTable[actualSquare],
             .N, .n => knightTable[actualSquare],
             .B, .b => bishopTable[actualSquare],
             .R, .r => rookTable[actualSquare],
             .Q, .q => queenTable[actualSquare],
-            .K, .k => kingTable[actualSquare],
+            .K, .k => if (is_endgame)
+                @divFloor(kingTable[actualSquare], 2) // Less important in endgame
+            else
+                kingTable[actualSquare],
         };
 
         // Return negative score for black pieces
@@ -147,12 +147,31 @@ pub const PositionalScore = struct {
     }
 };
 
+/// Fast inline function to detect endgame
+pub inline fn isEndgame(gameBoard: *const board.Board) bool {
+    // Consider it endgame if:
+    // 1. No queens or
+    // 2. Only one queen and no other major pieces or
+    // 3. Less than 3 minor pieces per side
+    const white_queen = gameBoard.bitboard[@intFromEnum(board.Piece.Q)];
+    const black_queen = gameBoard.bitboard[@intFromEnum(board.Piece.q)];
+    const white_rooks = gameBoard.bitboard[@intFromEnum(board.Piece.R)];
+    const black_rooks = gameBoard.bitboard[@intFromEnum(board.Piece.r)];
+
+    const queens = utils.countBits(white_queen | black_queen);
+    if (queens == 0) return true;
+
+    const major_pieces = queens + utils.countBits(white_rooks | black_rooks);
+    return major_pieces <= 1;
+}
+
 /// Evaluates the current position
 /// Returns a score in centipawns from white's perspective
 pub fn evaluate(gameBoard: *const board.Board) i32 {
     var score: i32 = 0;
+    const is_endgame = isEndgame(gameBoard);
 
-    // Calculate material and positional scores
+    // Use inline for to unroll the loop at compile time
     inline for (gameBoard.bitboard, 0..) |bitboard, pieceIndex| {
         var pieces = bitboard;
         const piece = @as(board.Piece, @enumFromInt(pieceIndex));
@@ -163,26 +182,26 @@ pub fn evaluate(gameBoard: *const board.Board) i32 {
                 // Add material score
                 score += MaterialScore.getScore(piece);
                 // Add positional score
-                score += PositionalScore.getScore(piece, @intCast(square)); // TODO: detect endgame
+                score += PositionalScore.getScore(piece, @intCast(square), is_endgame);
             }
-            pieces &= pieces - 1;
+            pieces &= pieces - 1; // Fast bit clear
         }
     }
 
-    // Return score from the perspective of the side to move
     return if (gameBoard.sideToMove == .white) score else -score;
 }
 
+/// Formats evaluation text for display
 pub fn getEvalText(score: i32) []const u8 {
-    if (score > 0) {
-        return "White is better";
-    } else if (score < 0) {
-        return "Black is better";
-    } else {
-        return "Equal position";
-    }
+    return if (score > 100)
+        "White is better"
+    else if (score < -100)
+        "Black is better"
+    else
+        "Equal position";
 }
 
+/// Formats evaluation notation (e.g. "+1.5" or "-0.5")
 pub fn getEvalNotation(score: i32) []const u8 {
     var buffer: [32]u8 = undefined;
     const absScore = @abs(score);

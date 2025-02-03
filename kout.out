@@ -1,0 +1,167 @@
+id name Kirin Chess
+id author Strydr Silverberg
+uciok
+Verifying Zobrist keys match Python implementation...
+Zobrist key for piece=0 square=0: 0x5c61682b61e5c8ba
+Zobrist key for piece=0 square=1: 0x81a75cbc0d562112
+Zobrist key for piece=0 square=2: 0xa6ed514d7ab30b86
+Zobrist key for piece=1 square=0: 0xadde8c7fb5656bae
+Zobrist key for piece=1 square=1: 0xd3248110bb0c45fe
+Zobrist key for piece=1 square=2: 0xf86a75a14fffd7aa
+Zobrist key for piece=2 square=0: 0xff5bb0d20ca89fc3
+Zobrist key for piece=2 square=1: 0x24a1a56467c1a94a
+Zobrist key for piece=2 square=2: 0x49e799f5db2b70be
+Castling key 0: 0x56913781170de706
+Castling key 1: 0x7bd72c12eade81b6
+Castling key 2: 0xa11d20a3416baa62
+Castling key 3: 0xc6631535e98072eb
+Side to move key: 0xb39b605bb156f981
+Book file size: 1150164 bytes
+Magic number read: 0x72626f6f6b696e67
+Version read: 1
+Entry size: 24 bytes
+Remaining size: 1150152 bytes
+Remainder when divided by entry size: 0
+Expected number of entries: 47923
+Current file position: 12
+Reading entry 0 of 47923...
+
+Entry 0:
+BookEntry{
+  hash: 0x555b648f1f643289,
+  source: 11,
+  target: 27,
+  promotion: 0,
+  moveType: 4,
+  piece: 1,
+  weight: 4,
+  learn: 0
+}
+
+Entry 1:
+BookEntry{
+  hash: 0x555b648f1f643289,
+  source: 1,
+  target: 18,
+  promotion: 0,
+  moveType: 0,
+  piece: 2,
+  weight: 0,
+  learn: 0
+}
+
+Entry 2:
+BookEntry{
+  hash: 0x555b648f1f643289,
+  source: 12,
+  target: 28,
+  promotion: 0,
+  moveType: 4,
+  piece: 1,
+  weight: 5,
+  learn: 0
+}
+Reading entry 1000 of 47923...
+Reading entry 2000 of 47923...
+Reading entry 3000 of 47923...
+Reading entry 4000 of 47923...
+Reading entry 5000 of 47923...
+Reading entry 6000 of 47923...
+Reading entry 7000 of 47923...
+Reading entry 8000 of 47923...
+Reading entry 9000 of 47923...
+Reading entry 10000 of 47923...
+Reading entry 11000 of 47923...
+Reading entry 12000 of 47923...
+Reading entry 13000 of 47923...
+Reading entry 14000 of 47923...
+Reading entry 15000 of 47923...
+Reading entry 16000 of 47923...
+Reading entry 17000 of 47923...
+Reading entry 18000 of 47923...
+Reading entry 19000 of 47923...
+Reading entry 20000 of 47923...
+Reading entry 21000 of 47923...
+Reading entry 22000 of 47923...
+Reading entry 23000 of 47923...
+Reading entry 24000 of 47923...
+Reading entry 25000 of 47923...
+Reading entry 26000 of 47923...
+Reading entry 27000 of 47923...
+Reading entry 28000 of 47923...
+Reading entry 29000 of 47923...
+Reading entry 30000 of 47923...
+Reading entry 31000 of 47923...
+Reading entry 32000 of 47923...
+Reading entry 33000 of 47923...
+Reading entry 34000 of 47923...
+Reading entry 35000 of 47923...
+Reading entry 36000 of 47923...
+Reading entry 37000 of 47923...
+Reading entry 38000 of 47923...
+Reading entry 39000 of 47923...
+Reading entry 40000 of 47923...
+Reading entry 41000 of 47923...
+Reading entry 42000 of 47923...
+Reading entry 43000 of 47923...
+Reading entry 44000 of 47923...
+Reading entry 45000 of 47923...
+Reading entry 46000 of 47923...
+Reading entry 47000 of 47923...
+Successfully loaded 47923 entries from book
+Starting position hash calculation...
+Hashing piece 0 on square 48: ^= 0x597f436a7891556b
+Hashing piece 0 on square 49: ^= 0x7ec537fb0f9fc4e5
+Hashing piece 0 on square 50: ^= 0xa40b2c8c64ccfcb7
+Hashing piece 0 on square 51: ^= 0xc951211ed9658c46
+Hashing piece 0 on square 52: ^= 0xee9715afb1369fda
+Hashing piece 0 on square 53: ^= 0x13dd0a40bcd36dd2
+Hashing piece 0 on square 54: ^= 0x3922fed1c759ba7e
+Hashing piece 0 on square 55: ^= 0x5e68f3631380d2af
+Hashing piece 1 on square 57: ^= 0xfa7200d93d8b239f
+Hashing piece 1 on square 62: ^= 0xb4cfc7b0e1d6b367
+Hashing piece 2 on square 58: ^= 0x713519be83a85e1d
+Hashing piece 2 on square 61: ^= 0xe106f77201e52988
+Hashing piece 3 on square 56: ^= 0x782654f056dc8059
+Hashing piece 3 on square 63: ^= 0x7d1004e927e4e49d
+Hashing piece 4 on square 59: ^= 0x397556f7c10de5b7
+Hashing piece 5 on square 60: ^= 0xb0386fdd9324b840
+Hashing piece 6 on square 8: ^= 0x6f7fe6acb348d255
+Hashing piece 6 on square 9: ^= 0x94c5db3ebf61c928
+Hashing piece 6 on square 10: ^= 0xba0bcfcfc11b20fc
+Hashing piece 6 on square 11: ^= 0xdf51c460152c0830
+Hashing piece 6 on square 12: ^= 0x0497b8f21d7d119f
+Hashing piece 6 on square 13: ^= 0x29ddad83408a2b09
+Hashing piece 6 on square 14: ^= 0x4f23a214f7e7c1b3
+Hashing piece 6 on square 15: ^= 0x746996a67c58d662
+Hashing piece 7 on square 1: ^= 0xbc135b0737672b69
+Hashing piece 7 on square 6: ^= 0x767121de6ee5e021
+Hashing piece 8 on square 2: ^= 0x32d673ec84cee727
+Hashing piece 8 on square 5: ^= 0xa2a851a006f77d82
+Hashing piece 9 on square 0: ^= 0x39c7af1dcbb18ecc
+Hashing piece 9 on square 7: ^= 0x3eb15f1720c1728b
+Hashing piece 10 on square 3: ^= 0xfb16b12540e2b14d
+Hashing piece 11 on square 4: ^= 0x71d9ca0a9741eecf
+Hashing WK castling: ^= 0x56913781170de706
+Hashing WQ castling: ^= 0x7bd72c12eade81b6
+Hashing BK castling: ^= 0xa11d20a3416baa62
+Hashing BQ castling: ^= 0xc6631535e98072eb
+Final position hash: 0x9768c183d29cf71f
+
+Looking up position hash: 0x9768c183d29cf71f
+Book contains hash: 0x991091fed54d1498 with 1 moves
+Book contains hash: 0x822163b3dd3259d9 with 1 moves
+Book contains hash: 0xd8bcf626dc8fc06e with 5 moves
+Book contains hash: 0x67ef845f14dcb9b7 with 9 moves
+Book contains hash: 0x3a1d394395780d1f with 1 moves
+Total unique positions in book: 43127
+No book entries found for position
+info depth 1 score cp 10 nodes 43
+info depth 2 score cp 0 nodes 385
+info depth 3 score cp 10 nodes 1719
+info depth 4 score cp 0 nodes 13490
+info depth 5 score cp 0 nodes 47065
+info depth 6 score cp 0 nodes 136028
+info depth 7 score cp 0 nodes 855260
+info depth 8 score cp 0 nodes 3120192
+bestmove b1c3

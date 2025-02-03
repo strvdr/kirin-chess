@@ -42,17 +42,12 @@ fn getRandomU64() u64 {
     return (n1 & 0xFFFFFFFF) | ((n2 & 0xFFFFFFFF) << 32);
 }
 
-fn generateMagicNumber() u64 {
-    // Using sparse magic numbers (fewer 1 bits) tends to work better
-    return getRandomU64() & getRandomU64() & getRandomU64();
-}
-
 fn findMagicNumber(square: u6, relevantBits: u5, is_bishop: bool) u64 {
     var occupancies: [4096]u64 = undefined;
-    var possibleAttacks: [4096]u64 = undefined;
-    var usedAttacks: [4096]u64 = undefined;
+    var attackTable: [4096]u64 = undefined;
+    var used: [4096]u64 = undefined;
 
-    // Get the attack mask for this square
+    // Get attack mask for this square
     const attackMask = if (is_bishop)
         attacks.maskBishopAttacks(square)
     else
@@ -64,47 +59,97 @@ fn findMagicNumber(square: u6, relevantBits: u5, is_bishop: bool) u64 {
     // Generate all possible occupancies and their corresponding attacks
     for (0..occupancyIndices) |index| {
         occupancies[index] = utils.setOccupancy(@intCast(index), relevantBits, attackMask);
-        possibleAttacks[index] = if (is_bishop)
+        attackTable[index] = if (is_bishop)
             attacks.bishopAttacksOTF(square, occupancies[index])
         else
             attacks.rookAttacksOTF(square, occupancies[index]);
     }
 
-    // Try to find a magic number
-    var tryCount: u32 = 0;
-    while (tryCount < MAX_TRIES) : (tryCount += 1) {
-        const magicCandidate = generateMagicNumber();
+    // Try magic numbers until one works
+    var tries: u32 = 0;
+    while (tries < MAX_TRIES) : (tries += 1) {
+        // Generate a candidate magic number
+        const magic = generateMagicNumber();
 
-        // Skip if the magic number doesn't have enough high bits set
-        if (utils.countBits((attackMask *% magicCandidate) & 0xFF00000000000000) < REQUIRED_HIGH_BITS) {
+        // Skip if the magic number doesn't have enough leading zeros after multiplication
+        if (utils.countBits((attackMask *% magic) & 0xFF00000000000000) < 6) {
             continue;
         }
 
-        // Reset the used attacks array
-        @memset(&usedAttacks, 0);
+        // Reset used attacks array
+        @memset(&used, 0);
+        var fail = false;
 
-        // Test if this magic number works
-        var index: u32 = 0;
-        var failed = false;
-        while (!failed and index < occupancyIndices) : (index += 1) {
-            const magicIndex = @as(u12, @intCast((occupancies[index] *% magicCandidate) >>
+        // Test this magic number against all occupancies
+        var i: usize = 0;
+        while (i < occupancyIndices and !fail) : (i += 1) {
+            const magicIndex = @as(u12, @intCast((occupancies[i] *% magic) >>
                 @intCast(@as(u8, 64) - relevantBits)));
 
-            // Check for collisions
-            if (usedAttacks[magicIndex] == 0) {
-                usedAttacks[magicIndex] = possibleAttacks[index];
-            } else if (usedAttacks[magicIndex] != possibleAttacks[index]) {
-                failed = true;
+            if (used[magicIndex] == 0) {
+                used[magicIndex] = attackTable[i];
+            } else if (used[magicIndex] != attackTable[i]) {
+                fail = true;
             }
         }
 
-        if (!failed) {
-            std.debug.print("Found magic number for square {d} ({c}{c}) after {d} tries: 0x{x:0>16}\n", .{ square, @as(u8, 'a') + @as(u8, @intCast(square % 8)), @as(u8, '1') + @as(u8, @intCast(square / 8)), tryCount, magicCandidate });
-            return magicCandidate;
+        if (!fail) {
+            return magic;
         }
     }
 
     @panic("Failed to find magic number");
+}
+
+fn generateMagicNumber() u64 {
+    return getRandomU64() &
+        getRandomU64() &
+        getRandomU64();
+}
+
+fn verifyMagicNumber(square: u6, magic: u64, relevantBits: u5, is_bishop: bool) !void {
+    var used = std.AutoHashMap(u12, u64).init(std.heap.page_allocator);
+    defer used.deinit();
+
+    const mask = if (is_bishop)
+        attacks.maskBishopAttacks(square)
+    else
+        attacks.maskRookAttacks(square);
+
+    const occupancyIndices = @as(u64, 1) << relevantBits;
+
+    var index: usize = 0;
+    while (index < occupancyIndices) : (index += 1) {
+        const occupancy = utils.setOccupancy(@intCast(index), relevantBits, mask);
+        const magicIndex = @as(u12, @intCast((occupancy *% magic) >>
+            @intCast(@as(u8, 64) - relevantBits)));
+
+        const attackTable = if (is_bishop)
+            attacks.bishopAttacksOTF(square, occupancy)
+        else
+            attacks.rookAttacksOTF(square, occupancy);
+
+        if (used.get(magicIndex)) |existing| {
+            if (existing != attackTable) {
+                return error.MagicCollision;
+            }
+        } else {
+            try used.put(magicIndex, attackTable);
+        }
+    }
+}
+
+test "verify all magic numbers" {
+    // Test both bishop and rook magic numbers for all squares
+    for (0..64) |square| {
+        const sq: u6 = @intCast(square);
+
+        // Verify bishop magic number
+        try verifyMagicNumber(sq, bitboard.Magic.bishopMagicNumbers[sq], bitboard.Magic.bishopRelevantBits[sq], true);
+
+        // Verify rook magic number
+        try verifyMagicNumber(sq, bitboard.Magic.rookMagicNumbers[sq], bitboard.Magic.rookRelevantBits[sq], false);
+    }
 }
 
 pub fn generateAllMagicNumbers() !void {
@@ -140,47 +185,26 @@ pub fn main() !void {
     std.debug.print("Magic numbers have been generated and saved to 'generated_magics.txt'\n", .{});
 }
 
-// Verify that a magic number works correctly
-fn verifyMagicNumber(square: u6, magic: u64, relevantBits: u5, is_bishop: bool) !void {
-    var attackTable: attacks.AttackTable = undefined;
-    attackTable.init();
+pub fn regenerateAllMagicNumbers() !void {
+    const stdout = std.io.getStdOut().writer();
 
-    const mask = if (is_bishop)
-        attackTable.bishop_masks[square]
-    else
-        attackTable.rook_masks[square];
+    try stdout.writeAll("Generating bishop magic numbers...\n");
+    for (0..64) |sq| {
+        const square = @as(u6, @intCast(sq));
+        const magic = findMagicNumber(square, bitboard.Magic.bishopRelevantBits[square], true);
+        try stdout.print("Bishop square {d}: 0x{x:0>16}\n", .{ square, magic });
 
-    const maxIndex = @as(u64, 1) << relevantBits;
-    var usedIndices = std.AutoHashMap(u12, u64).init(std.heap.page_allocator);
-    defer usedIndices.deinit();
-
-    var i: u64 = 0;
-    while (i < maxIndex) : (i += 1) {
-        const occupancy = utils.setOccupancy(i, relevantBits, mask);
-        const magicIndex = @as(u12, @intCast((occupancy *% magic) >> @intCast(64 - relevantBits)));
-
-        const attackPattern = if (is_bishop)
-            attacks.bishopAttacksOTF(square, occupancy)
-        else
-            attacks.rookAttacksOTF(square, occupancy);
-
-        if (usedIndices.get(magicIndex)) |previousAttacks| {
-            if (previousAttacks != attackPattern) {
-                return error.MagicCollision;
-            }
-        } else {
-            try usedIndices.put(magicIndex, attackPattern);
-        }
+        // Verify the generated number
+        try verifyMagicNumber(square, magic, bitboard.Magic.bishopRelevantBits[square], true);
     }
-}
 
-test "magic number verification" {
-    // Test both bishop and rook magic numbers for a few key squares
-    const testSquares = [_]u6{ 0, 27, 63 }; // corners and center
+    try stdout.writeAll("\nGenerating rook magic numbers...\n");
+    for (0..64) |sq| {
+        const square = @as(u6, @intCast(sq));
+        const magic = findMagicNumber(square, bitboard.Magic.rookRelevantBits[square], false);
+        try stdout.print("Rook square {d}: 0x{x:0>16}\n", .{ square, magic });
 
-    for (testSquares) |square| {
-        try verifyMagicNumber(square, bitboard.Magic.bishopMagicNumbers[square], bitboard.Magic.bishopRelevantBits[square], true);
-
-        try verifyMagicNumber(square, bitboard.Magic.rookMagicNumbers[square], bitboard.Magic.rookRelevantBits[square], false);
+        // Verify the generated number
+        try verifyMagicNumber(square, magic, bitboard.Magic.rookRelevantBits[square], false);
     }
 }
