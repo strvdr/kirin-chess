@@ -200,134 +200,136 @@ fn findMoves(str: []const u8) ?usize {
 }
 
 pub fn uciLoop(gameBoard: *bitboard.Board, attackTable: *attacks.AttackTable) !void {
-    const stdin = std.io.getStdIn().reader();
-    const stdout = std.io.getStdOut().writer();
+    const stdin_file = std.fs.File.stdin();
+    const stdout_file = std.fs.File.stdout();
 
     // Create transposition table
     var tt = transposition.TranspositionTable.init();
-    var searchActive = false;
-    var timer = std.time.Timer.start() catch |err| {
-        try stdout.print("info string Error initializing timer: {}\n", .{err});
-        return;
-    };
-    // Print engine info
-    try stdout.print("id name {s}\n", .{ENGINE_NAME});
-    try stdout.print("id author {s}\n", .{ENGINE_AUTHOR});
-    try stdout.print("uciok\n", .{});
 
-    // Fixed buffer for input
-    var buffer: [2000]u8 = undefined;
+    // Print engine info
+    try stdout_file.writeAll("id name " ++ ENGINE_NAME ++ "\n");
+    try stdout_file.writeAll("id author " ++ ENGINE_AUTHOR ++ "\n");
+    try stdout_file.writeAll("uciok\n");
+
+    var buffer: [4096]u8 = undefined;
 
     while (true) {
-        // Get user/GUI input
-        const input = stdin.readUntilDelimiter(&buffer, '\n') catch |err| switch (err) {
-            error.StreamTooLong => {
-                try stdout.print("info string Input too long\n", .{});
-                try stdin.skipUntilDelimiterOrEof('\n');
-                continue;
-            },
-            else => |e| return e,
-        };
+        // Read a line manually
+        var len: usize = 0;
+        while (len < buffer.len) {
+            var byte: [1]u8 = undefined;
+            const bytes_read = stdin_file.read(&byte) catch break;
+            if (bytes_read == 0) break; // EOF
+            if (byte[0] == '\n') break;
+            buffer[len] = byte[0];
+            len += 1;
+        }
+
+        if (len == 0) continue;
+
+        // Trim carriage return if present (Windows line endings)
+        const trimmed = std.mem.trimRight(u8, buffer[0..len], "\r");
 
         // Skip empty lines
-        if (input.len == 0) {
+        if (trimmed.len == 0) {
             continue;
         }
 
         // Parse UCI commands
-        if (std.mem.eql(u8, input, "isready")) {
-            try stdout.print("readyok\n", .{});
-        } else if (std.mem.startsWith(u8, input, "position")) {
-            parsePosition(input, gameBoard, attackTable) catch |err| {
-                try stdout.print("info string Error processing position: {}\n", .{err});
+        if (std.mem.eql(u8, trimmed, "isready")) {
+            try stdout_file.writeAll("readyok\n");
+        } else if (std.mem.startsWith(u8, trimmed, "position")) {
+            parsePosition(trimmed, gameBoard, attackTable) catch {
+                try stdout_file.writeAll("info string Error processing position\n");
                 continue;
             };
-        } else if (std.mem.eql(u8, input, "ucinewgame")) {
-            parsePosition("position startpos", gameBoard, attackTable) catch |err| {
-                try stdout.print("info string Error resetting position: {}\n", .{err});
+        } else if (std.mem.eql(u8, trimmed, "ucinewgame")) {
+            parsePosition("position startpos", gameBoard, attackTable) catch {
+                try stdout_file.writeAll("info string Error resetting position\n");
                 continue;
             };
-            // Clear transposition table for new game
             tt.clear();
-        } else if (std.mem.startsWith(u8, input, "go")) {
-            const params = parseGo(input) catch |err| {
-                try stdout.print("info string Error parsing go command: {}\n", .{err});
+        } else if (std.mem.startsWith(u8, trimmed, "go")) {
+            const params = parseGo(trimmed) catch {
+                try stdout_file.writeAll("info string Error parsing go command\n");
                 continue;
             };
 
-            // Calculate appropriate time for this move
             const moveTime = params.time_control.calculateMoveTime(gameBoard.sideToMove);
 
-            // Set up search limits
             const limits = search.SearchLimits{
                 .depth = params.time_control.depth orelse 64,
                 .nodes = params.time_control.nodes,
                 .movetime = if (!params.time_control.infinite) moveTime else null,
-                .infinite = params.time_control.infinite, // Pass through the infinite flag
+                .infinite = params.time_control.infinite,
             };
 
-            searchActive = true;
-            timer.reset();
-
-            // After performing the search:
-            const result = search.startSearch(gameBoard, attackTable, &tt, limits) catch |err| {
-                try stdout.print("info string Search error: {}\n", .{err});
-                try stdout.print("bestmove 0000\n", .{});
+            const result = search.startSearch(gameBoard, attackTable, &tt, limits) catch {
+                try stdout_file.writeAll("info string Search error\n");
+                try stdout_file.writeAll("bestmove 0000\n");
                 continue;
             };
 
-            // Now using result.bestMove
             if (result.bestMove) |best_move| {
-                var moveStr: [5]u8 = undefined;
-                var moveLen: usize = 4;
+                var moveStr: [16]u8 = undefined;
 
                 const sourceCoords = best_move.source.toCoordinates() catch {
-                    try stdout.print("bestmove 0000\n", .{});
+                    try stdout_file.writeAll("bestmove 0000\n");
                     continue;
                 };
                 const targetCoords = best_move.target.toCoordinates() catch {
-                    try stdout.print("bestmove 0000\n", .{});
+                    try stdout_file.writeAll("bestmove 0000\n");
                     continue;
                 };
 
-                moveStr[0] = sourceCoords[0];
-                moveStr[1] = sourceCoords[1];
-                moveStr[2] = targetCoords[0];
-                moveStr[3] = targetCoords[1];
+                var idx: usize = 0;
+                const prefix = "bestmove ";
+                @memcpy(moveStr[0..prefix.len], prefix);
+                idx = prefix.len;
+
+                moveStr[idx] = sourceCoords[0];
+                moveStr[idx + 1] = sourceCoords[1];
+                moveStr[idx + 2] = targetCoords[0];
+                moveStr[idx + 3] = targetCoords[1];
+                idx += 4;
 
                 if (best_move.moveType == movegen.MoveType.promotion or best_move.moveType == movegen.MoveType.promotionCapture) {
-                    moveStr[4] = switch (best_move.promotionPiece) {
+                    moveStr[idx] = switch (best_move.promotionPiece) {
                         movegen.PromotionPiece.queen => 'q',
                         movegen.PromotionPiece.rook => 'r',
                         movegen.PromotionPiece.bishop => 'b',
                         movegen.PromotionPiece.knight => 'n',
                         movegen.PromotionPiece.none => ' ',
                     };
-                    moveLen = 5;
+                    idx += 1;
                 }
 
-                try stdout.print("bestmove ", .{});
-                _ = try stdout.write(moveStr[0..moveLen]);
-                try stdout.print("\n", .{});
+                moveStr[idx] = '\n';
+                idx += 1;
+
+                try stdout_file.writeAll(moveStr[0..idx]);
             } else {
-                try stdout.print("bestmove 0000\n", .{});
+                try stdout_file.writeAll("bestmove 0000\n");
             }
-        } else if (std.mem.eql(u8, input, "quit")) {
+        } else if (std.mem.eql(u8, trimmed, "quit")) {
             break;
-        } else if (std.mem.eql(u8, input, "uci")) {
-            try stdout.print("id name {s}\n", .{ENGINE_NAME});
-            try stdout.print("id author {s}\n", .{ENGINE_AUTHOR});
-            try stdout.print("uciok\n", .{});
-        } else if (std.mem.eql(u8, input, "d")) {
-            // Debug command to print board
+        } else if (std.mem.eql(u8, trimmed, "uci")) {
+            try stdout_file.writeAll("id name " ++ ENGINE_NAME ++ "\n");
+            try stdout_file.writeAll("id author " ++ ENGINE_AUTHOR ++ "\n");
+            try stdout_file.writeAll("uciok\n");
+        } else if (std.mem.eql(u8, trimmed, "d")) {
             utils.printBoard(gameBoard);
             const score = evaluation.evaluate(gameBoard);
-            try stdout.print("Evaluation: {s} ({d})\n", .{
+            var buf: [128]u8 = undefined;
+            const msg = std.fmt.bufPrint(&buf, "Evaluation: {s} ({d})\n", .{
                 evaluation.getEvalNotation(score),
                 score,
-            });
+            }) catch "Evaluation error\n";
+            try stdout_file.writeAll(msg);
         } else {
-            try stdout.print("info string Unknown command: {s}\n", .{input});
+            try stdout_file.writeAll("info string Unknown command: ");
+            try stdout_file.writeAll(trimmed);
+            try stdout_file.writeAll("\n");
         }
     }
 }

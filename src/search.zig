@@ -678,54 +678,76 @@ pub fn startSearch(
 }
 
 fn printSearchInfo(info: *const SearchInfo, score: i32, depth: u8) !void {
-    const stdout = std.io.getStdOut().writer();
+    const stdout_file = std.fs.File.stdout();
+    var buf: [512]u8 = undefined;
 
-    try stdout.print("info depth {d} score ", .{depth});
+    var len: usize = 0;
+
+    // Build the info string
+    const depth_part = std.fmt.bufPrint(buf[len..], "info depth {d} score ", .{depth}) catch return;
+    len += depth_part.len;
 
     // Print score (handle mate scores specially)
     if (score > MATE_THRESHOLD) {
         const movesToMate = @divFloor(MATE_SCORE - score + 1, 2);
-        try stdout.print("mate {d} ", .{movesToMate});
+        const score_part = std.fmt.bufPrint(buf[len..], "mate {d} ", .{movesToMate}) catch return;
+        len += score_part.len;
     } else if (score < -MATE_THRESHOLD) {
         const movesToMate = @divFloor(MATE_SCORE + score, 2);
-        try stdout.print("mate -{d} ", .{movesToMate});
+        const score_part = std.fmt.bufPrint(buf[len..], "mate -{d} ", .{movesToMate}) catch return;
+        len += score_part.len;
     } else {
-        try stdout.print("cp {d} ", .{score});
+        const score_part = std.fmt.bufPrint(buf[len..], "cp {d} ", .{score}) catch return;
+        len += score_part.len;
     }
 
-    // Print nodes and principal variation
-    try stdout.print("nodes {d}", .{info.nodes});
+    // Print nodes
+    const nodes_part = std.fmt.bufPrint(buf[len..], "nodes {d}", .{info.nodes}) catch return;
+    len += nodes_part.len;
 
     // Print PV line if available
     if (info.pvLength[0] > 0) {
-        try stdout.print(" pv", .{});
+        const pv_header = std.fmt.bufPrint(buf[len..], " pv", .{}) catch return;
+        len += pv_header.len;
+
         var i: usize = 0;
         while (i < info.pvLength[0] and i < MAX_PLY) : (i += 1) {
             const move = info.pvTable[0][i];
-            const sourceCoords = try move.source.toCoordinates();
-            const targetCoords = try move.target.toCoordinates();
+            const sourceCoords = move.source.toCoordinates() catch return;
+            const targetCoords = move.target.toCoordinates() catch return;
 
-            try stdout.print(" {c}{c}{c}{c}", .{
+            const move_part = std.fmt.bufPrint(buf[len..], " {c}{c}{c}{c}", .{
                 sourceCoords[0],
                 sourceCoords[1],
                 targetCoords[0],
                 targetCoords[1],
-            });
+            }) catch return;
+            len += move_part.len;
 
             // Add promotion piece if applicable
             if (move.moveType == .promotion or move.moveType == .promotionCapture) {
-                switch (move.promotionPiece) {
-                    .queen => try stdout.print("q", .{}),
-                    .rook => try stdout.print("r", .{}),
-                    .bishop => try stdout.print("b", .{}),
-                    .knight => try stdout.print("n", .{}),
-                    .none => {},
+                const promo = switch (move.promotionPiece) {
+                    .queen => "q",
+                    .rook => "r",
+                    .bishop => "b",
+                    .knight => "n",
+                    .none => "",
+                };
+                if (promo.len > 0 and len < buf.len) {
+                    buf[len] = promo[0];
+                    len += 1;
                 }
             }
         }
     }
 
-    try stdout.print("\n", .{});
+    // Add newline
+    if (len < buf.len) {
+        buf[len] = '\n';
+        len += 1;
+    }
+
+    try stdout_file.writeAll(buf[0..len]);
 }
 
 // Move scoring score extraction function
